@@ -5,7 +5,7 @@
         body {
             font-family: Inter, sans-serif;
             margin: 0;
-            padding: 16px;
+            padding: 8px 16px 16px;
             color: #333;
         }
 
@@ -18,11 +18,12 @@
         .tabs {
             display: flex;
             border-bottom: 1px solid #e0e0e0;
-            margin-bottom: 16px;
+            margin-bottom: 4px;
         }
 
         .tab {
             padding: 8px 16px;
+            font-size: 14px;
             cursor: pointer;
             border-bottom: 2px solid transparent;
         }
@@ -41,7 +42,7 @@
         }
 
         h3 {
-            margin: 0 0 8px 0;
+            margin: 8px 0 8px 0;
             font-size: 14px;
             font-weight: 500;
         }
@@ -49,6 +50,7 @@
         textarea, input {
             width: 100%;
             padding: 8px;
+            margin-bottom: 4px;
             box-sizing: border-box;
             border: 1px solid #e0e0e0;
             border-radius: 4px;
@@ -56,7 +58,7 @@
         }
 
         textarea {
-            min-height: 100px;
+            /*min-height: 100px;*/
         }
 
         #output-code {
@@ -93,7 +95,7 @@
             padding: 8px;
             border-radius: 4px;
             margin-bottom: 8px;
-            font-size: 13px;
+            font-size: 10px;
         }
 
         select {
@@ -133,10 +135,10 @@
         <div id="selection-info">選択中のフレーム：なし</div>
 
         <h3>ベースコンポーネントコード</h3>
-        <textarea id="base-code" placeholder="ここにコンポーネントのコードを貼り付け"></textarea>
+        <textarea id="base-code" placeholder="ここにコンポーネントのコードを貼り付け" rows="4"></textarea>
 
         <h3>追加指示（オプション）</h3>
-        <textarea id="extra-rules" placeholder="生成時の追加ルールや指示があれば入力"></textarea>
+        <textarea id="extra-rules" placeholder="生成時の追加ルールや指示があれば入力" rows="1"></textarea>
 
         <button id="generate-btn">コードを生成</button>
 
@@ -145,7 +147,6 @@
 
         <div class="buttons">
             <button id="copy-btn" class="secondary">コードをコピー</button>
-            <button id="regenerate-btn" class="secondary">再生成</button>
         </div>
     </div>
 
@@ -154,7 +155,7 @@
         <h3>API設定</h3>
         <select id="provider-select">
             <option value="openai">OpenAI (GPT-4o-mini)</option>
-            <option value="gemini">Gemini 2.5 Flash</option>
+            <option value="gemini">Gemini 2.0 Flash</option>
         </select>
 
         <div id="api-keys-container">
@@ -198,6 +199,33 @@
 </div>
 
 <script>
+    function decodeHtmlEntities(str) {
+        // ブラウザの <textarea> を利用した簡易デコーダ
+        const txt = document.createElement('textarea');
+        txt.innerHTML = str;
+        return txt.value;
+    }
+    function sanitizeSvg(svg) {
+        return svg
+            // メタデータと定義部を削除
+            .replace(/<metadata[\s\S]*?<\/metadata>/gi, '')
+            .replace(/<defs[\s\S]*?<\/defs>/gi, '')
+            // style属性を削除
+            .replace(/\sxml:space="[^"]*"/gi, '')
+            .replace(/\sxmlns:xlink="[^"]*"/gi, '')
+            .replace(/\sstyle="[^"]*"/gi, '')
+            // fill, stroke 属性を削除
+            .replace(/\sfill="[^"]*"/gi, '')
+            .replace(/\sstroke="[^"]*"/gi, '')
+            // フォント属性を削除
+            .replace(/\sfont-family="[^"]*"/gi, '')
+            .replace(/\sfont-size="[^"]*"/gi, '')
+            .replace(/\sfont-weight="[^"]*"/gi, '')
+            .replace(/\sletter-spacing="[^"]*"/gi, '')
+            // 不要な空行をまとめて削除
+            .replace(/^\s*[\r\n]/gm, '');
+    }
+
     // --- SVG を含めるかどうかのフラグ ---
     const includeSvgData = true;
 
@@ -307,18 +335,6 @@
         parent.postMessage({ pluginMessage: { type: 'extract-content', includeSvg: includeSvgData } }, '*');
     });
 
-    // 再生成
-    document.getElementById('regenerate-btn').addEventListener('click', async () => {
-        const extraRules = document.getElementById('extra-rules').value;
-        const data = window._lastExtractedData;
-        const svg = window._lastExtractedSvg;
-        if (!data) {
-            alert('先にコード生成を実行してください');
-            return;
-        }
-        await generateCode(data, extraRules, svg);
-    });
-
     // コピー
     document.getElementById('copy-btn').addEventListener('click', function () {
         const outputCode = document.getElementById('output-code');
@@ -374,9 +390,13 @@
         ];
 
         if (svgData) {
+            // 1) 不要情報を削除
+            const cleaned = sanitizeSvg(svgData);
+            // 2) HTML エンティティをデコード
+            const decodedSvg = decodeHtmlEntities(cleaned);
             promptLines.push(
-                "### Figmaから抽出したSVGデータ",
-                svgData,
+                "### フレームのSVGデータ",
+                decodedSvg,
                 ""
             );
         }
@@ -392,13 +412,13 @@
             rules,
             "",
             "### 重要",
-            "- 原稿はtextフィールドからのみ、過不足なく抽出してください。",
+            "- 原稿はtextフィールドから抽出してください。",
             "- nameフィールドは原稿ではないため無視します。",
             "- textフィールドの内容が不完全に見えても、必ずtextフィールドのテキストを使用してください。",
             "",
             "## 手順",
             "1. textフィールドの原稿を抽出する",
-            "2. ベースコンポーネントのどこに配置するか判断する",
+            "2. ベースコンポーネントのどこに配置するか判断する。フレームのSVGデータがあれば、SVGの位置を参考にする",
             "3. ベースコンポーネントのどの部分を複製すべきか判断する",
             "4. 適切にテキストを配置したコードを生成する",
             "5. コードのみを返してください（説明文なし）"

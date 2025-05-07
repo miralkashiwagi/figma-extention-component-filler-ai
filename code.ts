@@ -1,7 +1,7 @@
 // code.ts
 
 // プラグインのメイン処理
-figma.showUI(__html__, { width: 480, height: 700 });
+figma.showUI(__html__, { width: 480, height: 600 });
 
 // クライアントストレージから設定を読み込む
 async function loadSettings() {
@@ -12,9 +12,9 @@ async function loadSettings() {
   const htmlRules = await figma.clientStorage.getAsync('format-html') || '';
   const pugRules = await figma.clientStorage.getAsync('format-pug') || '';
   const otherRules = await figma.clientStorage.getAsync('format-other') || '';
-  
-  figma.ui.postMessage({ 
-    type: "load-settings", 
+
+  figma.ui.postMessage({
+    type: "load-settings",
     data: { provider, openAiKey, geminiKey, format, htmlRules, pugRules, otherRules }
   });
 }
@@ -31,48 +31,45 @@ figma.on("selectionchange", () => {
 });
 
 // テキストコンテンツの抽出
-async function extractTextContent(nodeId:string) {
+async function extractTextContent(nodeId: string): Promise<any[]> {
   const node = await figma.getNodeByIdAsync(nodeId);
-  if (!node) return null;
-  
-  // 再帰的にテキストコンテンツを抽出する関数
-async function extractTextsFromNode(node:BaseNode): Promise<any[]> {
-  let texts: any[] = [];
-  
-  if (node.type === "TEXT") {
-    // テキストノードからテキストを取得
-    await figma.loadFontAsync(node.fontName as FontName);
-    texts.push({
-      id: node.id,
-      name: node.name,
-      text: node.characters,
-      style: {
-        fontSize: node.fontSize,
-        fontWeight: node.fontWeight,
-        textCase: node.textCase
+  if (!node) return [];
+
+  // 再帰的にテキストを抽出
+  async function extractTextsFromNode(node: BaseNode): Promise<any[]> {
+    let texts: any[] = [];
+
+    if (node.type === "TEXT") {
+      await figma.loadFontAsync(node.fontName as FontName);
+      const textNode = node as TextNode;
+      texts.push({
+        id: textNode.id,
+        name: textNode.name,
+        text: textNode.characters,
+        style: {
+          fontSize: textNode.fontSize,
+          fontWeight: textNode.fontWeight,
+          textCase: textNode.textCase
+        }
+      });
+    } else if ("children" in node) {
+      for (const child of node.children) {
+        texts = texts.concat(await extractTextsFromNode(child));
       }
-    });
-  } else if ("children" in node) {
-    // 子ノードがある場合は再帰的に処理
-    for (const child of node.children) {
-      const childTexts = await extractTextsFromNode(child);
-      texts = [...texts, ...childTexts];
     }
+
+    return texts;
   }
-  
-  return texts;
-}
-  
-  return await extractTextsFromNode(node);
+
+  return extractTextsFromNode(node);
 }
 
 // UIからのメッセージ受信
 figma.ui.onmessage = async (msg) => {
   if (msg.type === "init") {
-    // 初期設定読み込み
     await loadSettings();
+
   } else if (msg.type === "save-settings") {
-    // 設定保存: APIキー、フォーマット、追加ルール
     const { provider, openAiKey, geminiKey, format, htmlRules, pugRules, otherRules } = msg;
     await figma.clientStorage.setAsync("provider", provider);
     await figma.clientStorage.setAsync("openAiKey", openAiKey);
@@ -81,28 +78,50 @@ figma.ui.onmessage = async (msg) => {
     await figma.clientStorage.setAsync("format-html", htmlRules);
     await figma.clientStorage.setAsync("format-pug", pugRules);
     await figma.clientStorage.setAsync("format-other", otherRules);
-    // 保存完了をUIへ通知
     figma.ui.postMessage({ type: "saved" });
+
   } else if (msg.type === "extract-content") {
-    // 選択されたノードからテキストコンテンツを抽出
     const selection = figma.currentPage.selection;
     if (selection.length === 0) {
       figma.ui.postMessage({ type: "extraction-result", data: null, error: "フレームが選択されていません" });
       return;
     }
-    
+
     try {
+      // テキスト抽出
       const contentPromises = selection.map(node => extractTextContent(node.id));
       const contents = await Promise.all(contentPromises);
-      figma.ui.postMessage({ 
-        type: "extraction-result", 
-        data: contents.flat().filter(Boolean)
+      const flattened = contents.flat().filter(Boolean);
+
+      // SVG 抽出（オプション）
+      let svgData = "";
+      if (msg.includeSvg) {
+        const svgPromises = selection.map(async node => {
+          // ExportMixin を持つノードのみ SVG 出力可能
+          if ("exportAsync" in node) {
+            const bytes = await (node as SceneNode & ExportMixin).exportAsync({
+              format: "SVG",
+              svgOutlineText: false
+            });
+            return Array.from(bytes).map(b => String.fromCharCode(b)).join("");
+          }
+          return "";
+        });
+        const svgResults = await Promise.all(svgPromises);
+        svgData = svgResults.filter(s => s).join("\n");
+      }
+
+      figma.ui.postMessage({
+        type: "extraction-result",
+        data: flattened,
+        svgData
       });
-    } catch (error:any) {
-      figma.ui.postMessage({ 
-        type: "extraction-result", 
-        data: null, 
-        error: `抽出中にエラーが発生しました: ${error.message}` 
+
+    } catch (error: any) {
+      figma.ui.postMessage({
+        type: "extraction-result",
+        data: null,
+        error: `抽出中にエラーが発生しました: ${error.message}`
       });
     }
   }
