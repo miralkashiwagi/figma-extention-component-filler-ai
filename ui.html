@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            font-family: Inter, sans-serif;
+            margin: 0;
+            padding: 16px;
+            color: #333;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #e0e0e0;
+            margin-bottom: 16px;
+        }
+
+        .tab {
+            padding: 8px 16px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab.active {
+            border-bottom-color: #18a0fb;
+            font-weight: 500;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        h3 {
+            margin: 0 0 8px 0;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        textarea, input {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            resize: vertical;
+        }
+
+        textarea {
+            min-height: 100px;
+        }
+
+        #output-code {
+            min-height: 150px;
+            background-color: #f9f9f9;
+        }
+
+        button {
+            background-color: #18a0fb;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 8px 16px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        button:hover {
+            background-color: #0d8ede;
+        }
+
+        button.secondary {
+            background-color: #f5f5f5;
+            color: #333;
+            border: 1px solid #e0e0e0;
+        }
+
+        button.secondary:hover {
+            background-color: #e8e8e8;
+        }
+
+        #selection-info {
+            background-color: #f5f5f5;
+            padding: 8px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        select {
+            padding: 8px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            background-color: white;
+            width: 100%;
+        }
+
+        .row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .row > * {
+            flex: 1;
+        }
+
+        .buttons {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="tabs">
+        <div class="tab active" data-tab="main">メイン</div>
+        <div class="tab" data-tab="settings">設定</div>
+    </div>
+
+    <!-- メインタブ -->
+    <div id="main-tab" class="tab-content active">
+        <!-- 選択状況 -->
+        <div id="selection-info">選択中のフレーム：なし</div>
+
+        <!-- ベースコンポーネントコード入力 -->
+        <h3>ベースコンポーネントコード</h3>
+        <textarea id="base-code" placeholder="ここにコンポーネントのコードを貼り付け"></textarea>
+
+        <!-- 追加ルール入力 -->
+        <h3>追加指示（オプション）</h3>
+        <textarea id="extra-rules" placeholder="生成時の追加ルールや指示があれば入力"></textarea>
+
+        <!-- 生成ボタン -->
+        <button id="generate-btn">コードを生成</button>
+
+        <!-- 出力結果 -->
+        <h3>生成結果</h3>
+        <textarea id="output-code" readonly></textarea>
+
+        <div class="buttons">
+            <button id="copy-btn" class="secondary">コードをコピー</button>
+            <button id="regenerate-btn" class="secondary">再生成</button>
+        </div>
+    </div>
+
+    <!-- 設定タブ -->
+    <div id="settings-tab" class="tab-content">
+        <!-- API設定部分の修正 -->
+        <h3>API設定</h3>
+        <select id="provider-select">
+            <option value="openai">OpenAI (GPT-4o-mini)</option>
+            <option value="gemini">Gemini 2.5 Flash</option>
+        </select>
+
+        <div id="api-keys-container">
+            <div id="openai-key-container" class="api-key-group">
+                <h3>OpenAI APIキー</h3>
+                <input type="password" id="openai-api-key" placeholder="OpenAI APIキーを入力">
+            </div>
+
+            <div id="gemini-key-container" class="api-key-group" style="display: none;">
+                <h3>Gemini APIキー</h3>
+                <input type="password" id="gemini-api-key" placeholder="Gemini APIキーを入力">
+            </div>
+        </div>
+
+        <!-- フォーマット設定 -->
+        <h3>出力フォーマット</h3>
+        <select id="format-select">
+            <option value="html">HTML</option>
+            <option value="pug">Pug</option>
+            <option value="other">その他</option>
+        </select>
+
+        <!-- 追加ルール（フォーマット別） -->
+        <div id="rules-container">
+            <div id="html-rules" class="rules-group">
+                <h3>HTMLのルール</h3>
+                <textarea id="html-rules-text" placeholder="HTMLフォーマットでの追加ルールを入力"></textarea>
+            </div>
+
+            <div id="pug-rules" class="rules-group" style="display: none;">
+                <h3>Pugのルール</h3>
+                <textarea id="pug-rules-text" placeholder="Pugフォーマットでの追加ルールを入力"></textarea>
+            </div>
+
+            <div id="other-rules" class="rules-group" style="display: none;">
+                <h3>その他フォーマットのルール</h3>
+                <textarea id="other-rules-text" placeholder="その他フォーマットでの追加ルールを入力"></textarea>
+            </div>
+        </div>
+
+        <!-- 保存ボタン -->
+        <button id="save-settings-btn">設定を保存</button>
+    </div>
+</div>
+
+<script>
+    // タブ切り替え
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.addEventListener('click', function () {
+            // タブのアクティブ状態切り替え
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            this.classList.add('active');
+
+            // コンテンツの表示切り替え
+            const tabId = this.getAttribute('data-tab');
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`${tabId}-tab`).classList.add('active');
+        });
+    });
+
+    // フォーマット切り替え時のルール表示切り替え
+    document.getElementById('format-select').addEventListener('change', function () {
+        const format = this.value;
+        document.querySelectorAll('.rules-group').forEach(group => {
+            group.style.display = 'none';
+        });
+        document.getElementById(`${format}-rules`).style.display = 'block';
+    });
+
+    // 初期化時に設定を読み込む
+    window.onload = function () {
+        parent.postMessage({pluginMessage: {type: 'init'}}, '*');
+    };
+
+    // Figmaからのメッセージを受け取る
+    window.onmessage = async (event) => {
+        const msg = event.data.pluginMessage;
+
+        if (!msg) return;
+
+        if (msg.type === 'selection') {
+            // 選択変更イベント
+            document.getElementById('selection-info').textContent =
+                '選択中のフレーム：' + (msg.data.length ? msg.data.map(n => n.name).join(', ') : 'なし');
+        }
+        // 設定読み込み完了時の処理
+        else if (msg.type === 'load-settings') {
+            // 設定読み込み完了
+            const {openAiKey, geminiKey, format, htmlRules, pugRules, otherRules} = msg.data;
+
+            document.getElementById('openai-api-key').value = openAiKey;
+            document.getElementById('gemini-api-key').value = geminiKey;
+            document.getElementById('format-select').value = format;
+            document.getElementById('html-rules-text').value = htmlRules;
+            document.getElementById('pug-rules-text').value = pugRules;
+            document.getElementById('other-rules-text').value = otherRules;
+
+            // フォーマットに合わせてルール表示切り替え
+            document.querySelectorAll('.rules-group').forEach(group => {
+                group.style.display = 'none';
+            });
+            document.getElementById(`${format}-rules`).style.display = 'block';
+
+            // プロバイダーに合わせてAPIキー入力欄表示切り替え
+            const provider = document.getElementById('provider-select').value;
+            document.querySelectorAll('.api-key-group').forEach(group => {
+                group.style.display = 'none';
+            });
+            document.getElementById(`${provider}-key-container`).style.display = 'block';
+        } else if (msg.type === 'saved') {
+            // 設定保存完了
+            alert('設定を保存しました');
+        } else if (msg.type === 'extraction-result') {
+            // テキスト抽出結果
+            if (msg.error) {
+                alert(`エラー: ${msg.error}`);
+                return;
+            }
+
+            // 抽出されたテキストをAIに送信してコード生成
+            await generateCode(msg.data);
+        }
+    };
+
+    // 設定保存ボタン
+    document.getElementById('save-settings-btn').addEventListener('click', function () {
+        const apiKeyOpenAi = document.getElementById('openai-api-key').value;
+        const apiKeyGemini = document.getElementById('gemini-api-key').value;
+        const format = document.getElementById('format-select').value;
+        const htmlRules = document.getElementById('html-rules-text').value;
+        const pugRules = document.getElementById('pug-rules-text').value;
+        const otherRules = document.getElementById('other-rules-text').value;
+
+        parent.postMessage({
+            pluginMessage: {
+                type: 'save-settings',
+                apiKeyOpenAi,
+                apiKeyGemini,
+                format,
+                htmlRules,
+                pugRules,
+                otherRules
+            }
+        }, '*');
+    });
+
+    // コード生成ボタン
+    document.getElementById('generate-btn').addEventListener('click', async function () {
+        // テキスト抽出リクエスト
+        parent.postMessage({
+            pluginMessage: {type: 'extract-content'}
+        }, '*');
+    });
+
+    // 再生成ボタン
+    document.getElementById('regenerate-btn').addEventListener('click', async function () {
+        const extraRules = document.getElementById('extra-rules').value;
+        const lastExtractedData = window._lastExtractedData;
+
+        if (!lastExtractedData) {
+            alert('先にコード生成を実行してください');
+            return;
+        }
+
+        await generateCode(lastExtractedData, extraRules);
+    });
+
+    // コピーボタン
+    document.getElementById('copy-btn').addEventListener('click', function () {
+        const outputCode = document.getElementById('output-code');
+        outputCode.select();
+        document.execCommand('copy');
+        // コピー成功表示
+        this.textContent = 'コピー済み';
+        setTimeout(() => {
+            this.textContent = 'コードをコピー';
+        }, 2000);
+    });
+
+    // AIを使ったコード生成
+    async function generateCode(extractedData, extraRules = '') {
+        console.log('extractedData:', extractedData);
+        // 抽出データが空の場合はエラー
+        if (!extractedData || Object.keys(extractedData).length === 0) {
+            alert('抽出されたデータがありません。');
+            return;
+        }
+
+
+        // 抽出データを保存（再生成用）
+        window._lastExtractedData = extractedData;
+
+        const baseCode = document.getElementById('base-code').value;
+        const defaultExtraRules = document.getElementById('extra-rules').value;
+        const provider = document.getElementById('provider-select').value;
+        const apiKey = (provider === 'openai' ? document.getElementById('openai-api-key').value : document.getElementById('gemini-api-key').value);
+
+        if (!apiKey) {
+            alert('APIキーが設定されていません。設定タブで入力してください。');
+            return;
+        }
+
+        if (!baseCode) {
+            alert('ベースコンポーネントコードを入力してください。');
+            return;
+        }
+
+        // 現在選択中のフォーマット（HTML/Pug/その他）を取得
+        const format = document.getElementById('format-select').value;
+        const formatRules = document.getElementById(`${format}-rules-text`).value;
+
+        // 使用するルール（追加指示が指定されていればそれを、なければデフォルトの追加指示を使用）
+        const rules = extraRules || defaultExtraRules;
+
+        try {
+            // プロンプトの作成
+            const prompt = `
+以下の情報を元に、コンポーネントコードを生成してください：
+
+【ベースとなるコンポーネントコード】
+${baseCode}
+
+【フレームから抽出したテキストコンテンツ】
+${JSON.stringify(extractedData, null, 2)}
+
+【出力フォーマット】
+${format}
+
+【フォーマット固有のルール】
+${formatRules}
+
+【追加ルール・指示】
+${rules}
+
+原則として以下の手順で処理してください：
+1. 抽出されたテキストを分析し、それぞれがコンポーネントのどの部分に当てはまるか判断する
+2. ベースコンポーネントのどの部分を複製すべきか判断する
+3. 適切にテキストを配置したコードを生成する
+4. コードのみを返してください（説明文なし）
+`;
+
+            document.getElementById('output-code').value = '生成中...';
+
+            let url, headers, body, response;
+
+            if (provider === 'openai') {
+                // OpenAI API
+                url = 'https://api.openai.com/v1/chat/completions';
+                headers = {
+                    'Authorization': `Bearer ${apiKey}`,
+                    'Content-Type': 'application/json'
+                };
+                body = JSON.stringify({
+                    model: 'o4-mini',
+                    messages: [
+                        {
+                            role: 'system',
+                            content: 'あなたはFigmaプラグインのコード生成アシスタントです。HTMLやPugなどのコンポーネントコードを生成します。'
+                        },
+                        {role: 'user', content: prompt}
+                    ],
+                });
+
+                response = await fetch(url, {
+                    method: 'POST',
+                    headers,
+                    body
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error.message);
+                }
+
+                document.getElementById('output-code').value = data.choices[0].message.content;
+            } else {
+                // Gemini API
+                url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+                headers = {
+                    'Content-Type': 'application/json'
+                };
+                body = JSON.stringify({
+                    contents: [
+                        {
+                            parts: [
+                                {
+                                    text: `あなたはFigmaプラグインのコード生成アシスタントです。HTMLやPugなどのコンポーネントコードを生成します。\n\n${prompt}`
+                                }
+                            ]
+                        }
+                    ],
+                    generationConfig: {
+                        temperature: 0.3,
+                        maxOutputTokens: 2048
+                    }
+                });
+
+                response = await fetch(url, {
+                    method: 'POST',
+                    headers,
+                    body
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error.message);
+                }
+
+// レスポンス形式も変更されているため、データの取り出し方を修正
+                const generatedText = data.candidates && data.candidates[0] &&
+                    data.candidates[0].content &&
+                    data.candidates[0].content.parts &&
+                    data.candidates[0].content.parts[0] &&
+                    data.candidates[0].content.parts[0].text;
+
+                document.getElementById('output-code').value = generatedText || 'テキストが生成されませんでした。';
+
+            }
+        } catch (error) {
+            document.getElementById('output-code').value = `エラーが発生しました: ${error.message}`;
+        }
+    }
+
+    // プロバイダー切り替え時のAPIキー入力欄表示切り替え
+    document.getElementById('provider-select').addEventListener('change', function () {
+        const provider = this.value;
+        document.querySelectorAll('.api-key-group').forEach(group => {
+            group.style.display = 'none';
+        });
+        document.getElementById(`${provider}-key-container`).style.display = 'block';
+    });
+
+    // 初期表示時にも実行
+    window.addEventListener('load', function () {
+        const provider = document.getElementById('provider-select').value;
+        document.querySelectorAll('.api-key-group').forEach(group => {
+            group.style.display = 'none';
+        });
+        document.getElementById(`${provider}-key-container`).style.display = 'block';
+    });
+</script>
+</body>
+</html>
