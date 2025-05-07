@@ -5,6 +5,7 @@ figma.showUI(__html__, { width: 480, height: 700 });
 
 // クライアントストレージから設定を読み込む
 async function loadSettings() {
+  const provider = await figma.clientStorage.getAsync('provider') || 'openai';
   const openAiKey = await figma.clientStorage.getAsync('openAiKey') || '';
   const geminiKey = await figma.clientStorage.getAsync('geminiKey') || '';
   const format = await figma.clientStorage.getAsync('format') || 'html';
@@ -14,7 +15,7 @@ async function loadSettings() {
   
   figma.ui.postMessage({ 
     type: "load-settings", 
-    data: { openAiKey, geminiKey, format, htmlRules, pugRules, otherRules } 
+    data: { provider, openAiKey, geminiKey, format, htmlRules, pugRules, otherRules }
   });
 }
 
@@ -72,7 +73,8 @@ figma.ui.onmessage = async (msg) => {
     await loadSettings();
   } else if (msg.type === "save-settings") {
     // 設定保存: APIキー、フォーマット、追加ルール
-    const { openAiKey, geminiKey, format, htmlRules, pugRules, otherRules } = msg;
+    const { provider, openAiKey, geminiKey, format, htmlRules, pugRules, otherRules } = msg;
+    await figma.clientStorage.setAsync("provider", provider);
     await figma.clientStorage.setAsync("openAiKey", openAiKey);
     await figma.clientStorage.setAsync("geminiKey", geminiKey);
     await figma.clientStorage.setAsync("format", format);

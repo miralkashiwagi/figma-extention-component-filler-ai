@@ -251,8 +251,8 @@
         // 設定読み込み完了時の処理
         else if (msg.type === 'load-settings') {
             // 設定読み込み完了
-            const {openAiKey, geminiKey, format, htmlRules, pugRules, otherRules} = msg.data;
-
+            const {provider, openAiKey, geminiKey, format, htmlRules, pugRules, otherRules} = msg.data;
+            document.getElementById('provider-select').value = provider;
             document.getElementById('openai-api-key').value = openAiKey;
             document.getElementById('gemini-api-key').value = geminiKey;
             document.getElementById('format-select').value = format;
@@ -267,7 +267,6 @@
             document.getElementById(`${format}-rules`).style.display = 'block';
 
             // プロバイダーに合わせてAPIキー入力欄表示切り替え
-            const provider = document.getElementById('provider-select').value;
             document.querySelectorAll('.api-key-group').forEach(group => {
                 group.style.display = 'none';
             });
@@ -289,8 +288,9 @@
 
     // 設定保存ボタン
     document.getElementById('save-settings-btn').addEventListener('click', function () {
-        const apiKeyOpenAi = document.getElementById('openai-api-key').value;
-        const apiKeyGemini = document.getElementById('gemini-api-key').value;
+        const provider = document.getElementById('provider-select').value;
+        const openAiKey = document.getElementById('openai-api-key').value;
+        const geminiKey = document.getElementById('gemini-api-key').value;
         const format = document.getElementById('format-select').value;
         const htmlRules = document.getElementById('html-rules-text').value;
         const pugRules = document.getElementById('pug-rules-text').value;
@@ -299,8 +299,9 @@
         parent.postMessage({
             pluginMessage: {
                 type: 'save-settings',
-                apiKeyOpenAi,
-                apiKeyGemini,
+                provider,
+                openAiKey,
+                geminiKey,
                 format,
                 htmlRules,
                 pugRules,
@@ -344,7 +345,6 @@
 
     // AIを使ったコード生成
     async function generateCode(extractedData, extraRules = '') {
-        console.log('extractedData:', extractedData);
         // 抽出データが空の場合はエラー
         if (!extractedData || Object.keys(extractedData).length === 0) {
             alert('抽出されたデータがありません。');
@@ -441,13 +441,14 @@ ${rules}
                 document.getElementById('output-code').value = data.choices[0].message.content;
             } else {
                 // Gemini API
-                url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+                url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
                 headers = {
                     'Content-Type': 'application/json'
                 };
                 body = JSON.stringify({
                     contents: [
                         {
+                            role: 'assistant',
                             parts: [
                                 {
                                     text: `あなたはFigmaプラグインのコード生成アシスタントです。HTMLやPugなどのコンポーネントコードを生成します。\n\n${prompt}`
@@ -457,7 +458,7 @@ ${rules}
                     ],
                     generationConfig: {
                         temperature: 0.3,
-                        maxOutputTokens: 2048
+                        maxOutputTokens: 2048 // 必要に応じてこの値を調整してください (例: 8192)
                     }
                 });
 
@@ -470,10 +471,9 @@ ${rules}
                 const data = await response.json();
 
                 if (data.error) {
-                    throw new Error(data.error.message);
+                    throw new Error(data.error.message || 'Gemini API request failed');
                 }
 
-// レスポンス形式も変更されているため、データの取り出し方を修正
                 const generatedText = data.candidates && data.candidates[0] &&
                     data.candidates[0].content &&
                     data.candidates[0].content.parts &&
@@ -481,7 +481,6 @@ ${rules}
                     data.candidates[0].content.parts[0].text;
 
                 document.getElementById('output-code').value = generatedText || 'テキストが生成されませんでした。';
-
             }
         } catch (error) {
             document.getElementById('output-code').value = `エラーが発生しました: ${error.message}`;
