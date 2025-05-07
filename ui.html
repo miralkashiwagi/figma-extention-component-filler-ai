@@ -61,7 +61,7 @@
             /*min-height: 100px;*/
         }
 
-        #output-code {
+        #output-code,#prompt-log {
             min-height: 150px;
             background-color: #f9f9f9;
         }
@@ -148,6 +148,9 @@
         <div class="buttons">
             <button id="copy-btn" class="secondary">コードをコピー</button>
         </div>
+
+        <h3>送信されたプロンプト</h3>
+        <textarea id="prompt-log" readonly></textarea>
     </div>
 
     <!-- 設定タブ -->
@@ -426,7 +429,7 @@
 
         const userPrompt = promptLines.join("\n");
 
-        console.log("User Prompt:", userPrompt);
+        document.getElementById('prompt-log').value = userPrompt;
 
         document.getElementById('output-code').value = '生成中...';
 
