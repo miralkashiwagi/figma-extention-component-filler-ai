@@ -61,11 +61,11 @@ function extractTextContent(nodeId) {
                     texts.push({
                         id: textNode.id,
                         text: textNode.characters.replace(/\u2028/g, '\n'),
-                        style: {
-                            fontSize: textNode.fontSize,
-                            fontWeight: textNode.fontWeight,
-                            textCase: textNode.textCase
-                        }
+                        // style: {
+                        //   fontSize: textNode.fontSize,
+                        //   fontWeight: textNode.fontWeight,
+                        //   textCase: textNode.textCase
+                        // }
                     });
                 }
                 else if ("children" in node) {
