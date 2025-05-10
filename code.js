@@ -60,7 +60,7 @@ function extractTextContent(nodeId) {
                     yield Promise.all(Array.from(fonts).map(f => figma.loadFontAsync(JSON.parse(f))));
                     texts.push({
                         id: textNode.id,
-                        text: textNode.characters,
+                        text: textNode.characters.replace(/\u2028/g, '\n'),
                         style: {
                             fontSize: textNode.fontSize,
                             fontWeight: textNode.fontWeight,

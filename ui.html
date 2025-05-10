@@ -225,6 +225,9 @@
             .replace(/\sfont-size="[^"]*"/gi, '')
             .replace(/\sfont-weight="[^"]*"/gi, '')
             .replace(/\sletter-spacing="[^"]*"/gi, '')
+            // tspanの開始と終了タグを削除して内部のコンテンツは残す
+            .replace(/<tspan[^>]*>/gi, '')
+            .replace(/<\/tspan>/gi, '')
             // 不要な空行をまとめて削除
             .replace(/^\s*[\r\n]/gm, '');
     }
@@ -415,8 +418,7 @@
             rules,
             "",
             "### 重要",
-            "- 原稿はtextフィールドから抽出してください。",
-            "- nameフィールドは原稿ではないため無視します。",
+            "- 原稿はFigmaから抽出したJSONのtextフィールドから抽出してください。",
             "- textフィールドの内容が不完全に見えても、必ずtextフィールドのテキストを使用してください。",
             "",
             "## 手順",
