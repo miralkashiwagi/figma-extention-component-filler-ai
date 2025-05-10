@@ -40,11 +40,19 @@ async function extractTextContent(nodeId: string): Promise<any[]> {
     let texts: any[] = [];
 
     if (node.type === "TEXT") {
-      await figma.loadFontAsync(node.fontName as FontName);
       const textNode = node as TextNode;
+      // テキスト全体の範囲で使われている全フォントを取得してロード
+      const length = textNode.characters.length;
+      const fonts = new Set<string>();
+      for (let i = 0; i < length; i++) {
+        const font = textNode.getRangeFontName(i, i + 1) as FontName;
+        fonts.add(JSON.stringify(font));
+      }
+      // フォントを一括ロード
+      await Promise.all(Array.from(fonts).map(f => figma.loadFontAsync(JSON.parse(f))));
+
       texts.push({
         id: textNode.id,
-        name: textNode.name,
         text: textNode.characters,
         style: {
           fontSize: textNode.fontSize,
