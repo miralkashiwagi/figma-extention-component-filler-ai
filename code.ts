@@ -53,7 +53,11 @@ async function extractTextContent(nodeId: string): Promise<any[]> {
 
       texts.push({
         id: textNode.id,
-        text: textNode.characters.replace(/\u2028/g, '\n'),
+        text: textNode.characters
+            .replace(/\u2028/g, '\n')        // Unicode改行
+            .replace(/\\n/g, '\n')           // バックスラッシュn → 改行
+            .replace(/\r\n/g, '\n')          // CRLF → LF
+            .replace(/\r/g, '\n')            // CR → LF
         // style: {
         //   fontSize: textNode.fontSize,
         //   fontWeight: textNode.fontWeight,
