@@ -232,6 +232,11 @@
             .replace(/^\s*[\r\n]/gm, '');
     }
 
+    // 共通の出力セット関数
+    function setOutputCode(result) {
+        document.getElementById('output-code').value = result.replace(/```[\w-]*\s*|```/g, "");;
+    }
+
     // --- SVG を含めるかどうかのフラグ ---
     const includeSvgData = true;
 
@@ -434,7 +439,7 @@
 
         document.getElementById('prompt-log').value = userPrompt;
 
-        document.getElementById('output-code').value = '生成中...';
+        setOutputCode('生成中...');
 
         try {
             let response, data;
@@ -456,7 +461,7 @@
                 });
                 data = await response.json();
                 if (data.error) throw new Error(data.error.message);
-                document.getElementById('output-code').value = data.choices[0].message.content;
+                setOutputCode(data.choices[0].message.content);
 
             } else {
                 response = await fetch(
@@ -483,10 +488,10 @@
                 data = await response.json();
                 if (data.error) throw new Error(data.error.message || 'Gemini API request failed');
                 const candidate = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                document.getElementById('output-code').value = candidate || 'テキストが生成されませんでした。';
+                setOutputCode(candidate || 'テキストが生成されませんでした。');
             }
         } catch (error) {
-            document.getElementById('output-code').value = `エラーが発生しました: ${error.message}`;
+            setOutputCode(`エラーが発生しました: ${error.message}`);
         }
     }
 
