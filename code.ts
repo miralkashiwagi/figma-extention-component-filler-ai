@@ -108,19 +108,33 @@ figma.ui.onmessage = async (msg) => {
       // SVG 抽出（オプション）
       let svgData = "";
       if (msg.includeSvg) {
-        const svgPromises = selection.map(async node => {
-          // ExportMixin を持つノードのみ SVG 出力可能
-          if ("exportAsync" in node) {
-            const bytes = await (node as SceneNode & ExportMixin).exportAsync({
-              format: "SVG",
-              svgOutlineText: false
-            });
-            return Array.from(bytes).map(b => String.fromCharCode(b)).join("");
+        if (selection.length > 1) {
+          // 複数選択時：一時グループに複製→SVG→削除
+          // 1. 複製
+          const clones: SceneNode[] = [];
+          for (const node of selection) {
+            if ("clone" in node) {
+              const clone = node.clone();
+              clones.push(clone);
+            }
           }
-          return "";
-        });
-        const svgResults = await Promise.all(svgPromises);
-        svgData = svgResults.filter(s => s).join("\n");
+          // 2. グループ化
+          const group = figma.group(clones, figma.currentPage);
+          // 3. SVG出力
+          const bytes = await group.exportAsync({ format: "SVG", svgOutlineText: false });
+          svgData = String.fromCharCode(...bytes);
+          // 4. グループ削除
+          group.remove();
+        } else if (selection.length === 1 && "exportAsync" in selection[0]) {
+          // 単一選択時は従来通り
+          const bytes = await (selection[0] as SceneNode & ExportMixin).exportAsync({
+            format: "SVG",
+            svgOutlineText: false
+          });
+          svgData = String.fromCharCode(...bytes);
+        } else {
+          svgData = "";
+        }
       }
 
       figma.ui.postMessage({

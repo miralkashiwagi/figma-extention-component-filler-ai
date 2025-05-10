@@ -209,27 +209,57 @@
         return txt.value;
     }
     function sanitizeSvg(svg) {
+
         return svg
-            // メタデータと定義部を削除
+            // メタデータと定義部を削除（レイアウトには影響しない）
             .replace(/<metadata[\s\S]*?<\/metadata>/gi, '')
             .replace(/<defs[\s\S]*?<\/defs>/gi, '')
-            // style属性を削除
+            // 不要なスタイル属性を削除するが、位置情報は保持
             .replace(/\sxml:space="[^"]*"/gi, '')
             .replace(/\sxmlns:xlink="[^"]*"/gi, '')
-            .replace(/\sstyle="[^"]*"/gi, '')
-            // fill, stroke 属性を削除
-            .replace(/\sfill="[^"]*"/gi, '')
-            .replace(/\sstroke="[^"]*"/gi, '')
-            // フォント属性を削除
-            .replace(/\sfont-family="[^"]*"/gi, '')
-            .replace(/\sfont-size="[^"]*"/gi, '')
-            .replace(/\sfont-weight="[^"]*"/gi, '')
-            .replace(/\sletter-spacing="[^"]*"/gi, '')
-            // tspanの開始と終了タグを削除して内部のコンテンツは残す
-            .replace(/<tspan[^>]*>/gi, '')
-            .replace(/<\/tspan>/gi, '')
+            // スタイル属性から不要な部分のみ削除（フォントサイズなどは保持）
+            .replace(/style="([^"]*)"/gi, function(match, styleContent) {
+                // 必要なスタイル（位置や寸法に関するもの）を保持
+                const necessaryStyles = styleContent.split(';')
+                    .filter(style => {
+                        const prop = style.split(':')[0]?.trim();
+                        return prop && (
+                            prop.includes('position') ||
+                            prop.includes('width') ||
+                            prop.includes('height') ||
+                            prop.includes('top') ||
+                            prop.includes('left') ||
+                            prop.includes('transform') ||
+                            prop.includes('display') ||
+                            prop.includes('margin') ||
+                            prop.includes('padding')
+                        );
+                    })
+                    .join(';');
+
+                return necessaryStyles ? `style="${necessaryStyles}"` : '';
+            })
+            // fill と stroke は視覚的な区別に役立つ場合があるので保持
+            // レイアウトに影響するフォント属性は保持
+            .replace(/\sfont-family="[^"]*"/gi, '')  // フォントファミリーは削除してOK
+            // フォントサイズとウェイトはレイアウトに影響するので保持
+            // .replace(/\sfont-size="[^"]*"/gi, '')
+            // .replace(/\sfont-weight="[^"]*"/gi, '')
+            // .replace(/\sletter-spacing="[^"]*"/gi, '')
+            // tspan要素は保持（テキストのレイアウト情報を含む場合がある）
+            // .replace(/<tspan[^>]*>/gi, '')
+            // .replace(/<\/tspan>/gi, '')
+            // x, y, transform 属性は位置情報として重要なので保持
             // 不要な空行をまとめて削除
-            .replace(/^\s*[\r\n]/gm, '');
+            .replace(/^\s*[\r\n]/gm, '')
+            // path要素は選択的に処理（テキスト周りの重要な視覚要素は保持）
+            .replace(/<path ([^>]*)>/gi, function(match, attrs) {
+                // d属性（パスデータ）が非常に長い場合は簡略化
+                if (attrs.includes('d="M') && attrs.length > 500) {
+                    return '<path d="[simplified]" />';
+                }
+                return match;
+            });
     }
 
     // 共通の出力セット関数
