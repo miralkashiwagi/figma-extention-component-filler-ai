@@ -12,10 +12,10 @@ async function loadSettings() {
   const htmlRules = await figma.clientStorage.getAsync('format-html') || '';
   const pugRules = await figma.clientStorage.getAsync('format-pug') || '';
   const otherRules = await figma.clientStorage.getAsync('format-other') || '';
-
+  const sendSimplifiedSvg = (await figma.clientStorage.getAsync('sendSimplifiedSvg'));
   figma.ui.postMessage({
     type: "load-settings",
-    data: { provider, openAiKey, geminiKey, format, htmlRules, pugRules, otherRules }
+    data: { provider, openAiKey, geminiKey, format, htmlRules, pugRules, otherRules, sendSimplifiedSvg: sendSimplifiedSvg === undefined ? true : sendSimplifiedSvg }
   });
 }
 
@@ -83,7 +83,7 @@ figma.ui.onmessage = async (msg) => {
     await loadSettings();
 
   } else if (msg.type === "save-settings") {
-    const { provider, openAiKey, geminiKey, format, htmlRules, pugRules, otherRules } = msg;
+    const { provider, openAiKey, geminiKey, format, htmlRules, pugRules, otherRules, sendSimplifiedSvg } = msg;
     await figma.clientStorage.setAsync("provider", provider);
     await figma.clientStorage.setAsync("openAiKey", openAiKey);
     await figma.clientStorage.setAsync("geminiKey", geminiKey);
@@ -91,9 +91,11 @@ figma.ui.onmessage = async (msg) => {
     await figma.clientStorage.setAsync("format-html", htmlRules);
     await figma.clientStorage.setAsync("format-pug", pugRules);
     await figma.clientStorage.setAsync("format-other", otherRules);
+    await figma.clientStorage.setAsync("sendSimplifiedSvg", sendSimplifiedSvg);
     figma.ui.postMessage({ type: "saved" });
 
   } else if (msg.type === "extract-content") {
+    const includeSvg = msg.includeSvg !== undefined ? msg.includeSvg : true;
     const selection = figma.currentPage.selection;
     if (selection.length === 0) {
       figma.ui.postMessage({ type: "extraction-result", data: null, error: "フレームが選択されていません" });
@@ -108,34 +110,18 @@ figma.ui.onmessage = async (msg) => {
 
       // SVG 抽出（オプション）
       let svgData = "";
-      if (msg.includeSvg) {
-        if (selection.length > 1) {
-          // 複数選択時：一時グループに複製→SVG→削除
-          // 1. 複製
-          const clones: SceneNode[] = [];
-          for (const node of selection) {
-            if ("clone" in node) {
-              const clone = node.clone();
-              clones.push(clone);
-            }
-          }
-          // 2. グループ化
-          const group = figma.group(clones, figma.currentPage);
-          // 3. SVG出力
-          const bytes = await group.exportAsync({ format: "SVG", svgOutlineText: false });
-          svgData = String.fromCharCode(...bytes);
-          // 4. グループ削除
-          group.remove();
-        } else if (selection.length === 1 && "exportAsync" in selection[0]) {
-          // 単一選択時は従来通り
+      if (includeSvg && selection.length > 0) {
+        try {
           const bytes = await (selection[0] as SceneNode & ExportMixin).exportAsync({
             format: "SVG",
             svgOutlineText: false
           });
           svgData = String.fromCharCode(...bytes);
-        } else {
+        } catch (e) {
           svgData = "";
         }
+      } else {
+        svgData = "";
       }
 
       figma.ui.postMessage({

@@ -22,7 +22,7 @@
         }
 
         .tab {
-            padding: 8px 16px;
+            padding: 3px 16px;
             font-size: 14px;
             cursor: pointer;
             border-bottom: 2px solid transparent;
@@ -47,7 +47,7 @@
             font-weight: 500;
         }
 
-        textarea, input {
+        textarea, input:not([type="checkbox"],[type="radio"]) {
             width: 100%;
             padding: 8px;
             margin-bottom: 4px;
@@ -106,14 +106,10 @@
             width: 100%;
         }
 
-        .row {
+        .label{
+            margin-bottom: 4px;
             display: flex;
-            gap: 8px;
-            align-items: center;
-        }
-
-        .row > * {
-            flex: 1;
+            font-size: 14px;
         }
 
         .buttons {
@@ -197,6 +193,14 @@
             </div>
         </div>
 
+
+        <h3>その他</h3>
+        <div>
+            <label class="label">
+                <input type="checkbox" id="send-simplified-svg" checked>
+                簡略化済みSVGを送信
+            </label>
+        </div>
         <button id="save-settings-btn">設定を保存</button>
     </div>
 </div>
@@ -268,7 +272,16 @@
     }
 
     // --- SVG を含めるかどうかのフラグ ---
-    const includeSvgData = true;
+    let includeSvgData = true;
+
+    // 設定タブのチェックボックス状態で切り替え
+    function updateIncludeSvgDataFromSettings() {
+        const cb = document.getElementById('send-simplified-svg');
+        includeSvgData = cb ? cb.checked : true;
+    }
+    document.getElementById('send-simplified-svg').addEventListener('change', updateIncludeSvgDataFromSettings);
+    // 設定タブを開いた時にも反映
+    document.querySelector('[data-tab="settings"]').addEventListener('click', updateIncludeSvgDataFromSettings);
 
     // --- 全 AI API 共通で使うシステムプロンプト ---
     const commonSystemPrompt = "あなたはFigmaプラグインのコード生成アシスタントです。HTMLやPugなどのコンポーネントコードを生成します。";
@@ -316,7 +329,7 @@
                 '選択中のフレーム：' + (msg.data.length ? msg.data.map(n => n.name).join(', ') : 'なし');
         }
         else if (msg.type === 'load-settings') {
-            const {provider, openAiKey, geminiKey, format, htmlRules, pugRules, otherRules} = msg.data;
+            const {provider, openAiKey, geminiKey, format, htmlRules, pugRules, otherRules, sendSimplifiedSvg} = msg.data;
             document.getElementById('provider-select').value = provider;
             document.getElementById('openai-api-key').value = openAiKey;
             document.getElementById('gemini-api-key').value = geminiKey;
@@ -324,10 +337,13 @@
             document.getElementById('html-rules-text').value = htmlRules;
             document.getElementById('pug-rules-text').value = pugRules;
             document.getElementById('other-rules-text').value = otherRules;
-
+            if (typeof sendSimplifiedSvg === 'boolean') {
+                document.getElementById('send-simplified-svg').checked = sendSimplifiedSvg;
+            } else {
+                document.getElementById('send-simplified-svg').checked = true;
+            }
             document.querySelectorAll('.rules-group').forEach(g => g.style.display = 'none');
             document.getElementById(`${format}-rules`).style.display = 'block';
-
             document.querySelectorAll('.api-key-group').forEach(g => g.style.display = 'none');
             document.getElementById(`${provider}-key-container`).style.display = 'block';
         }
@@ -356,6 +372,7 @@
         const htmlRules = document.getElementById('html-rules-text').value;
         const pugRules = document.getElementById('pug-rules-text').value;
         const otherRules = document.getElementById('other-rules-text').value;
+        const sendSimplifiedSvg = document.getElementById('send-simplified-svg').checked;
 
         parent.postMessage({
             pluginMessage: {
@@ -366,13 +383,15 @@
                 format,
                 htmlRules,
                 pugRules,
-                otherRules
+                otherRules,
+                sendSimplifiedSvg
             }
         }, '*');
     });
 
     // コード生成
     document.getElementById('generate-btn').addEventListener('click', () => {
+        updateIncludeSvgDataFromSettings();
         parent.postMessage({ pluginMessage: { type: 'extract-content', includeSvg: includeSvgData } }, '*');
     });
 
