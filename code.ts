@@ -73,6 +73,7 @@ async function extractTextContent(nodeId: string): Promise<any[]> {
     return texts;
   }
 
+
   return extractTextsFromNode(node);
 }
 
