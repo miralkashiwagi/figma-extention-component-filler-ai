@@ -58,7 +58,14 @@ function extractTextContent(nodeId) {
                         fonts.add(JSON.stringify(font));
                     }
                     // フォントを一括ロード
-                    yield Promise.all(Array.from(fonts).map(f => figma.loadFontAsync(JSON.parse(f))));
+                    yield Promise.all(Array.from(fonts).map((f) => __awaiter(this, void 0, void 0, function* () {
+                        try {
+                            yield figma.loadFontAsync(JSON.parse(f));
+                        }
+                        catch (error) {
+                            console.warn("Failed to load font:", JSON.parse(f), error);
+                        }
+                    })));
                     texts.push({
                         id: textNode.id,
                         text: textNode.characters
