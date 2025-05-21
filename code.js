@@ -51,21 +51,20 @@ function extractTextContent(nodeId) {
                 if (node.type === "TEXT") {
                     const textNode = node;
                     // テキスト全体の範囲で使われている全フォントを取得してロード
-                    const length = textNode.characters.length;
-                    const fonts = new Set();
-                    for (let i = 0; i < length; i++) {
-                        const font = textNode.getRangeFontName(i, i + 1);
-                        fonts.add(JSON.stringify(font));
-                    }
-                    // フォントを一括ロード
-                    yield Promise.all(Array.from(fonts).map((f) => __awaiter(this, void 0, void 0, function* () {
-                        try {
-                            yield figma.loadFontAsync(JSON.parse(f));
-                        }
-                        catch (error) {
-                            console.warn("Failed to load font:", JSON.parse(f), error);
-                        }
-                    })));
+                    // const length = textNode.characters.length;
+                    // const fonts = new Set<string>();
+                    // for (let i = 0; i < length; i++) {
+                    //   const font = textNode.getRangeFontName(i, i + 1) as FontName;
+                    //   fonts.add(JSON.stringify(font));
+                    // }
+                    // // フォントを一括ロード
+                    // await Promise.all(Array.from(fonts).map(async (f) => {
+                    //   try {
+                    //     await figma.loadFontAsync(JSON.parse(f));
+                    //   } catch (error) {
+                    //     console.warn("Failed to load font:", JSON.parse(f), error);
+                    //   }
+                    // }));
                     texts.push({
                         id: textNode.id,
                         text: textNode.characters
