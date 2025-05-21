@@ -24,7 +24,16 @@ function loadSettings() {
         const sendSimplifiedSvg = (yield figma.clientStorage.getAsync('sendSimplifiedSvg'));
         figma.ui.postMessage({
             type: "load-settings",
-            data: { provider, openAiKey, geminiKey, format, htmlRules, pugRules, otherRules, sendSimplifiedSvg: sendSimplifiedSvg === undefined ? true : sendSimplifiedSvg }
+            data: {
+                provider,
+                openAiKey,
+                geminiKey,
+                format,
+                htmlRules,
+                pugRules,
+                otherRules,
+                sendSimplifiedSvg: sendSimplifiedSvg === undefined ? true : sendSimplifiedSvg
+            }
         });
     });
 }
@@ -143,10 +152,11 @@ figma.ui.onmessage = (msg) => __awaiter(void 0, void 0, void 0, function* () {
             });
         }
         catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
             figma.ui.postMessage({
                 type: "extraction-result",
                 data: null,
-                error: `抽出中にエラーが発生しました: ${error.message}`
+                error: `抽出中にエラーが発生しました: ${errorMessage}`
             });
         }
     }

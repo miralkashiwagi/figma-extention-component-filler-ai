@@ -1,10 +1,33 @@
 // code.ts
 
+// 型定義
+interface TextContent {
+  id: string;
+  text: string;
+}
+
+interface SelectionData {
+  id: string;
+  name: string;
+  type: string;
+}
+
+interface SettingsData {
+  provider: string;
+  openAiKey: string;
+  geminiKey: string;
+  format: string;
+  htmlRules: string;
+  pugRules: string;
+  otherRules: string;
+  sendSimplifiedSvg: boolean;
+}
+
 // プラグインのメイン処理
 figma.showUI(__html__, { width: 480, height: 600 });
 
 // クライアントストレージから設定を読み込む
-async function loadSettings() {
+async function loadSettings(): Promise<void> {
   const provider = await figma.clientStorage.getAsync('provider') || 'openai';
   const openAiKey = await figma.clientStorage.getAsync('openAiKey') || '';
   const geminiKey = await figma.clientStorage.getAsync('geminiKey') || '';
@@ -15,14 +38,23 @@ async function loadSettings() {
   const sendSimplifiedSvg = (await figma.clientStorage.getAsync('sendSimplifiedSvg'));
   figma.ui.postMessage({
     type: "load-settings",
-    data: { provider, openAiKey, geminiKey, format, htmlRules, pugRules, otherRules, sendSimplifiedSvg: sendSimplifiedSvg === undefined ? true : sendSimplifiedSvg }
+    data: { 
+      provider, 
+      openAiKey, 
+      geminiKey, 
+      format, 
+      htmlRules, 
+      pugRules, 
+      otherRules, 
+      sendSimplifiedSvg: sendSimplifiedSvg === undefined ? true : sendSimplifiedSvg 
+    } as SettingsData
   });
 }
 
 // 選択要素の変更を監視し、UIへ送信
 figma.on("selectionchange", () => {
   const selection = figma.currentPage.selection;
-  const data = selection.map(node => ({
+  const data: SelectionData[] = selection.map(node => ({
     id: node.id,
     name: node.name,
     type: node.type
@@ -31,13 +63,13 @@ figma.on("selectionchange", () => {
 });
 
 // テキストコンテンツの抽出
-async function extractTextContent(nodeId: string): Promise<any[]> {
+async function extractTextContent(nodeId: string): Promise<TextContent[]> {
   const node = await figma.getNodeByIdAsync(nodeId);
   if (!node) return [];
 
   // 再帰的にテキストを抽出
-  async function extractTextsFromNode(node: BaseNode): Promise<any[]> {
-    let texts: any[] = [];
+  async function extractTextsFromNode(node: BaseNode): Promise<TextContent[]> {
+    let texts: TextContent[] = [];
 
     if (node.type === "TEXT") {
       const textNode = node as TextNode;
@@ -136,11 +168,12 @@ figma.ui.onmessage = async (msg) => {
         svgData
       });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       figma.ui.postMessage({
         type: "extraction-result",
         data: null,
-        error: `抽出中にエラーが発生しました: ${error.message}`
+        error: `抽出中にエラーが発生しました: ${errorMessage}`
       });
     }
   }
