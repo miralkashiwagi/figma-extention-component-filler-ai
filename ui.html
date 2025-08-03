@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <style>
         body {
@@ -47,7 +48,8 @@
             font-weight: 500;
         }
 
-        textarea, input:not([type="checkbox"],[type="radio"]) {
+        textarea,
+        input:not([type="checkbox"], [type="radio"]) {
             width: 100%;
             padding: 8px;
             margin-bottom: 4px;
@@ -61,7 +63,8 @@
             /*min-height: 100px;*/
         }
 
-        #output-code,#prompt-log {
+        #output-code,
+        #prompt-log {
             min-height: 150px;
             background-color: #f9f9f9;
         }
@@ -106,7 +109,7 @@
             width: 100%;
         }
 
-        .label{
+        .label {
             margin-bottom: 4px;
             display: flex;
             font-size: 14px;
@@ -119,462 +122,478 @@
         }
     </style>
 </head>
+
 <body>
-<div class="container">
-    <div class="tabs">
-        <div class="tab active" data-tab="main">メイン</div>
-        <div class="tab" data-tab="settings">設定</div>
+    <div class="container">
+        <div class="tabs">
+            <div class="tab active" data-tab="main">メイン</div>
+            <div class="tab" data-tab="settings">設定</div>
+        </div>
+
+        <!-- メインタブ -->
+        <div id="main-tab" class="tab-content active">
+            <div id="selection-info">選択中のフレーム：なし</div>
+
+            <h3>ベースコンポーネントコード</h3>
+            <textarea id="base-code" placeholder="ここにコンポーネントのコードを貼り付け" rows="4"></textarea>
+
+            <h3>追加指示（オプション）</h3>
+            <textarea id="extra-rules" placeholder="生成時の追加ルールや指示があれば入力" rows="1"></textarea>
+
+            <button id="generate-btn">コードを生成</button><br><small>「テキストが生成されませんでした。」と出たらもう一度押してください</small>
+
+            <h3>生成結果</h3>
+            <textarea id="output-code" readonly></textarea>
+
+            <div class="buttons">
+                <button id="copy-btn" class="secondary">コードをコピー</button>
+            </div>
+
+            <h3>送信されたプロンプト</h3>
+            <textarea id="prompt-log" readonly></textarea>
+        </div>
+
+        <!-- 設定タブ -->
+        <div id="settings-tab" class="tab-content">
+            <h3>API設定</h3>
+            <select id="provider-select">
+                <option value="openai">OpenAI (GPT-4o-mini)</option>
+                <option value="gemini">Gemini 2.5 Flash</option>
+                <!--<option value="gemini-pro">Gemini 2.5 Pro (Beta)</option>-->
+            </select>
+
+            <div id="api-keys-container">
+                <div id="openai-key-container" class="api-key-group">
+                    <h3>OpenAI APIキー</h3>
+                    <input type="password" id="openai-api-key" placeholder="OpenAI APIキーを入力">
+                </div>
+
+                <div id="gemini-key-container" class="api-key-group" style="display: none;">
+                    <h3>Gemini APIキー</h3>
+                    <input type="password" id="gemini-api-key" placeholder="Gemini APIキーを入力">
+                </div>
+            </div>
+
+            <h3>出力フォーマット</h3>
+            <select id="format-select">
+                <option value="html">HTML</option>
+                <option value="pug">Pug</option>
+                <option value="other">その他</option>
+            </select>
+
+            <div id="rules-container">
+                <div id="html-rules" class="rules-group">
+                    <h3>HTMLのルール</h3>
+                    <textarea id="html-rules-text" placeholder="HTMLフォーマットでの追加ルールを入力"></textarea>
+                </div>
+
+                <div id="pug-rules" class="rules-group" style="display: none;">
+                    <h3>Pugのルール</h3>
+                    <textarea id="pug-rules-text" placeholder="Pugフォーマットでの追加ルールを入力"></textarea>
+                </div>
+
+                <div id="other-rules" class="rules-group" style="display: none;">
+                    <h3>その他フォーマットのルール</h3>
+                    <textarea id="other-rules-text" placeholder="その他フォーマットでの追加ルールを入力"></textarea>
+                </div>
+            </div>
+
+
+            <h3>その他</h3>
+            <div>
+                <label class="label">
+                    <input type="checkbox" id="send-png-data" checked>
+                    PNGデータを送信<small>（順序が正しくなりやすい・トークンの消費が大きい）</small>
+                </label>
+            </div>
+            <button id="save-settings-btn">設定を保存</button>
+        </div>
     </div>
 
-    <!-- メインタブ -->
-    <div id="main-tab" class="tab-content active">
-        <div id="selection-info">選択中のフレーム：なし</div>
-
-        <h3>ベースコンポーネントコード</h3>
-        <textarea id="base-code" placeholder="ここにコンポーネントのコードを貼り付け" rows="4"></textarea>
-
-        <h3>追加指示（オプション）</h3>
-        <textarea id="extra-rules" placeholder="生成時の追加ルールや指示があれば入力" rows="1"></textarea>
-
-        <button id="generate-btn">コードを生成</button>
-
-        <h3>生成結果</h3>
-        <textarea id="output-code" readonly></textarea>
-
-        <div class="buttons">
-            <button id="copy-btn" class="secondary">コードをコピー</button>
-        </div>
-
-        <h3>送信されたプロンプト</h3>
-        <textarea id="prompt-log" readonly></textarea>
-    </div>
-
-    <!-- 設定タブ -->
-    <div id="settings-tab" class="tab-content">
-        <h3>API設定</h3>
-        <select id="provider-select">
-            <option value="openai">OpenAI (GPT-4o-mini)</option>
-            <option value="gemini">Gemini 2.5 Flash</option>
-            <!--<option value="gemini-pro">Gemini 2.5 Pro (Beta)</option>-->
-        </select>
-
-        <div id="api-keys-container">
-            <div id="openai-key-container" class="api-key-group">
-                <h3>OpenAI APIキー</h3>
-                <input type="password" id="openai-api-key" placeholder="OpenAI APIキーを入力">
-            </div>
-
-            <div id="gemini-key-container" class="api-key-group" style="display: none;">
-                <h3>Gemini APIキー</h3>
-                <input type="password" id="gemini-api-key" placeholder="Gemini APIキーを入力">
-            </div>
-        </div>
-
-        <h3>出力フォーマット</h3>
-        <select id="format-select">
-            <option value="html">HTML</option>
-            <option value="pug">Pug</option>
-            <option value="other">その他</option>
-        </select>
-
-        <div id="rules-container">
-            <div id="html-rules" class="rules-group">
-                <h3>HTMLのルール</h3>
-                <textarea id="html-rules-text" placeholder="HTMLフォーマットでの追加ルールを入力"></textarea>
-            </div>
-
-            <div id="pug-rules" class="rules-group" style="display: none;">
-                <h3>Pugのルール</h3>
-                <textarea id="pug-rules-text" placeholder="Pugフォーマットでの追加ルールを入力"></textarea>
-            </div>
-
-            <div id="other-rules" class="rules-group" style="display: none;">
-                <h3>その他フォーマットのルール</h3>
-                <textarea id="other-rules-text" placeholder="その他フォーマットでの追加ルールを入力"></textarea>
-            </div>
-        </div>
+    <script>
+        function decodeHtmlEntities(str) {
+            // ブラウザの <textarea> を利用した簡易デコーダ
+            const txt = document.createElement('textarea');
+            txt.innerHTML = str;
+            return txt.value;
+        }
 
 
-        <h3>その他</h3>
-        <div>
-            <label class="label">
-                <input type="checkbox" id="send-simplified-svg" checked>
-                簡略化済みSVGを送信
-            </label>
-        </div>
-        <button id="save-settings-btn">設定を保存</button>
-    </div>
-</div>
+        // 共通の出力セット関数
+        function setOutputCode(result) {
+            document.getElementById('output-code').value = result.replace(/```[\w-]*\s*|```/g, "");;
+        }
 
-<script>
-    function decodeHtmlEntities(str) {
-        // ブラウザの <textarea> を利用した簡易デコーダ
-        const txt = document.createElement('textarea');
-        txt.innerHTML = str;
-        return txt.value;
-    }
-    function sanitizeSvg(svg) {
+        // --- PNG データを含めるかどうかのフラグ ---
+        let includePngData = true;
 
-        return svg
-            // メタデータと定義部を削除（レイアウトには影響しない）
-            .replace(/<metadata[\s\S]*?<\/metadata>/gi, '')
-            .replace(/<defs[\s\S]*?<\/defs>/gi, '')
-            // 不要なスタイル属性を削除するが、位置情報は保持
-            .replace(/\sxml:space="[^"]*"/gi, '')
-            .replace(/\sxmlns:xlink="[^"]*"/gi, '')
-            // スタイル属性から不要な部分のみ削除（フォントサイズなどは保持）
-            .replace(/style="([^"]*)"/gi, function(match, styleContent) {
-                // 必要なスタイル（位置や寸法に関するもの）を保持
-                const necessaryStyles = styleContent.split(';')
-                    .filter(style => {
-                        const prop = style.split(':')[0]?.trim();
-                        return prop && (
-                            prop.includes('position') ||
-                            prop.includes('width') ||
-                            prop.includes('height') ||
-                            prop.includes('top') ||
-                            prop.includes('left') ||
-                            prop.includes('transform') ||
-                            prop.includes('display') ||
-                            prop.includes('margin') ||
-                            prop.includes('padding')
-                        );
-                    })
-                    .join(';');
+        // 設定タブのチェックボックス状態で切り替え
+        function updateIncludePngDataFromSettings() {
+            const cb = document.getElementById('send-png-data');
+            includePngData = cb ? cb.checked : true;
+        }
+        document.getElementById('send-png-data').addEventListener('change', updateIncludePngDataFromSettings);
+        // 設定タブを開いた時にも反映
+        document.querySelector('[data-tab="settings"]').addEventListener('click', updateIncludePngDataFromSettings);
 
-                return necessaryStyles ? `style="${necessaryStyles}"` : '';
-            })
-            // fill と stroke は視覚的な区別に役立つ場合があるので保持
-            // レイアウトに影響するフォント属性は保持
-            .replace(/\sfont-family="[^"]*"/gi, '')  // フォントファミリーは削除してOK
-            // フォントサイズとウェイトはレイアウトに影響するので保持
-            // .replace(/\sfont-size="[^"]*"/gi, '')
-            // .replace(/\sfont-weight="[^"]*"/gi, '')
-            // .replace(/\sletter-spacing="[^"]*"/gi, '')
-            // tspan要素は保持（テキストのレイアウト情報を含む場合がある）
-            // .replace(/<tspan[^>]*>/gi, '')
-            // .replace(/<\/tspan>/gi, '')
-            // x, y, transform 属性は位置情報として重要なので保持
-            // 不要な空行をまとめて削除
-            .replace(/^\s*[\r\n]/gm, '')
-            // path要素は選択的に処理（テキスト周りの重要な視覚要素は保持）
-            .replace(/<path ([^>]*)>/gi, function(match, attrs) {
-                // d属性（パスデータ）が非常に長い場合は簡略化
-                if (attrs.includes('d="M') && attrs.length > 300) {
-                    return '<path d="[simplified]" />';
-                }
-                return match;
+        // --- 全 AI API 共通で使うシステムプロンプト ---
+        const commonSystemPrompt = "あなたはFigmaプラグインのコード生成アシスタントです。HTMLやPugなどのコンポーネントコードを生成します。";
+
+        // --- AI（プロバイダー）ごとに個別指定する追加プロンプト ---
+        const providerSpecificPrompts = {
+            openai: "",   // OpenAI 向けに追加したい場合ここに記述
+            gemini: ""    // Gemini 向けに追加したい場合ここに記述
+        };
+
+        // タブ切り替え
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function () {
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                const tabId = this.getAttribute('data-tab');
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                document.getElementById(`${tabId}-tab`).classList.add('active');
             });
-    }
-
-    // 共通の出力セット関数
-    function setOutputCode(result) {
-        document.getElementById('output-code').value = result.replace(/```[\w-]*\s*|```/g, "");;
-    }
-
-    // --- SVG を含めるかどうかのフラグ ---
-    let includeSvgData = true;
-
-    // 設定タブのチェックボックス状態で切り替え
-    function updateIncludeSvgDataFromSettings() {
-        const cb = document.getElementById('send-simplified-svg');
-        includeSvgData = cb ? cb.checked : true;
-    }
-    document.getElementById('send-simplified-svg').addEventListener('change', updateIncludeSvgDataFromSettings);
-    // 設定タブを開いた時にも反映
-    document.querySelector('[data-tab="settings"]').addEventListener('click', updateIncludeSvgDataFromSettings);
-
-    // --- 全 AI API 共通で使うシステムプロンプト ---
-    const commonSystemPrompt = "あなたはFigmaプラグインのコード生成アシスタントです。HTMLやPugなどのコンポーネントコードを生成します。";
-
-    // --- AI（プロバイダー）ごとに個別指定する追加プロンプト ---
-    const providerSpecificPrompts = {
-        openai: "",   // OpenAI 向けに追加したい場合ここに記述
-        gemini: ""    // Gemini 向けに追加したい場合ここに記述
-    };
-
-    // タブ切り替え
-    document.querySelectorAll('.tab').forEach(tab => {
-        tab.addEventListener('click', function () {
-            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            this.classList.add('active');
-            const tabId = this.getAttribute('data-tab');
-            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.getElementById(`${tabId}-tab`).classList.add('active');
         });
-    });
 
-    // フォーマット切り替え
-    document.getElementById('format-select').addEventListener('change', function () {
-        const format = this.value;
-        document.querySelectorAll('.rules-group').forEach(g => g.style.display = 'none');
-        document.getElementById(`${format}-rules`).style.display = 'block';
-    });
-
-    // ページ読み込み時に初期化
-    window.onload = function () {
-        parent.postMessage({ pluginMessage: { type: 'init' } }, '*');
-        // API キー欄も初期表示に合わせる
-        const provider = document.getElementById('provider-select').value;
-        document.querySelectorAll('.api-key-group').forEach(g => g.style.display = 'none');
-        
-        // geminiとgemini-proの両方でGemini APIキー欄を表示
-        if (provider === 'gemini' || provider === 'gemini-pro') {
-            document.getElementById('gemini-key-container').style.display = 'block';
-        } else {
-            document.getElementById(`${provider}-key-container`).style.display = 'block';
-        }
-    };
-
-    // Figma からのメッセージ受信
-    window.onmessage = async (event) => {
-        const msg = event.data.pluginMessage;
-        if (!msg) return;
-
-        if (msg.type === 'selection') {
-            document.getElementById('selection-info').textContent =
-                '選択中のフレーム：' + (msg.data.length ? msg.data.map(n => n.name).join(', ') : 'なし');
-        }
-        else if (msg.type === 'load-settings') {
-            const {provider, openAiKey, geminiKey, format, htmlRules, pugRules, otherRules, sendSimplifiedSvg} = msg.data;
-            document.getElementById('provider-select').value = provider;
-            document.getElementById('openai-api-key').value = openAiKey;
-            document.getElementById('gemini-api-key').value = geminiKey;
-            document.getElementById('format-select').value = format;
-            document.getElementById('html-rules-text').value = htmlRules;
-            document.getElementById('pug-rules-text').value = pugRules;
-            document.getElementById('other-rules-text').value = otherRules;
-            if (typeof sendSimplifiedSvg === 'boolean') {
-                document.getElementById('send-simplified-svg').checked = sendSimplifiedSvg;
-            } else {
-                document.getElementById('send-simplified-svg').checked = true;
-            }
+        // フォーマット切り替え
+        document.getElementById('format-select').addEventListener('change', function () {
+            const format = this.value;
             document.querySelectorAll('.rules-group').forEach(g => g.style.display = 'none');
             document.getElementById(`${format}-rules`).style.display = 'block';
+        });
+
+        // ページ読み込み時に初期化
+        window.onload = function () {
+            parent.postMessage({ pluginMessage: { type: 'init' } }, '*');
+            // API キー欄も初期表示に合わせる
+            const provider = document.getElementById('provider-select').value;
             document.querySelectorAll('.api-key-group').forEach(g => g.style.display = 'none');
-            
+
             // geminiとgemini-proの両方でGemini APIキー欄を表示
             if (provider === 'gemini' || provider === 'gemini-pro') {
                 document.getElementById('gemini-key-container').style.display = 'block';
             } else {
                 document.getElementById(`${provider}-key-container`).style.display = 'block';
             }
-        }
-        else if (msg.type === 'saved') {
-            alert('設定を保存しました');
-        }
-        else if (msg.type === 'extraction-result') {
-            if (msg.error) {
-                alert(`エラー: ${msg.error}`);
+        };
+
+        // Figma からのメッセージ受信
+        window.onmessage = async (event) => {
+            const msg = event.data.pluginMessage;
+            if (!msg) return;
+
+            if (msg.type === 'selection') {
+                document.getElementById('selection-info').textContent =
+                    '選択中のフレーム：' + (msg.data.length ? msg.data.map(n => n.name).join(', ') : 'なし');
+            }
+            else if (msg.type === 'load-settings') {
+                const { provider, openAiKey, geminiKey, format, htmlRules, pugRules, otherRules, sendPngData } = msg.data;
+                document.getElementById('provider-select').value = provider;
+                document.getElementById('openai-api-key').value = openAiKey;
+                document.getElementById('gemini-api-key').value = geminiKey;
+                document.getElementById('format-select').value = format;
+                document.getElementById('html-rules-text').value = htmlRules;
+                document.getElementById('pug-rules-text').value = pugRules;
+                document.getElementById('other-rules-text').value = otherRules;
+                if (typeof sendPngData === 'boolean') {
+                    document.getElementById('send-png-data').checked = sendPngData;
+                } else {
+                    document.getElementById('send-png-data').checked = true;
+                }
+                document.querySelectorAll('.rules-group').forEach(g => g.style.display = 'none');
+                document.getElementById(`${format}-rules`).style.display = 'block';
+                document.querySelectorAll('.api-key-group').forEach(g => g.style.display = 'none');
+
+                // geminiとgemini-proの両方でGemini APIキー欄を表示
+                if (provider === 'gemini' || provider === 'gemini-pro') {
+                    document.getElementById('gemini-key-container').style.display = 'block';
+                } else {
+                    document.getElementById(`${provider}-key-container`).style.display = 'block';
+                }
+            }
+            else if (msg.type === 'saved') {
+                alert('設定を保存しました');
+            }
+            else if (msg.type === 'extraction-result') {
+                if (msg.error) {
+                    // 詳細なエラー情報を表示
+                    let errorMessage = `エラー: ${msg.error}`;
+                    if (msg.errorDetails) {
+                        errorMessage += `\n\n詳細: ${msg.errorDetails}`;
+                    }
+                    if (msg.recoverable) {
+                        errorMessage += '\n\n上記の問題を解決してから再度お試しください。';
+                    }
+                    alert(errorMessage);
+                    return;
+                }
+                // 抽出データと PNG データを保存
+                const { data: extractedData, pngData, metadata } = msg;
+                window._lastExtractedData = extractedData;
+                window._lastExtractedPng = pngData || '';
+                window._lastPngMetadata = metadata || {};
+                await generateCode(extractedData, '', pngData, metadata);
+            }
+            else if (msg.type === 'error-feedback') {
+                // 一般的なエラーフィードバック処理
+                const { error } = msg;
+                let errorMessage = `エラー: ${error.message}`;
+                if (error.details) {
+                    errorMessage += `\n\n詳細: ${error.details}`;
+                }
+                if (error.recoverable) {
+                    errorMessage += '\n\n上記の問題を解決してから再度お試しください。';
+                } else {
+                    errorMessage += '\n\nこのエラーは自動的に回復できません。プラグインを再起動してください。';
+                }
+                alert(errorMessage);
+            }
+
+        };
+
+        // 設定保存
+        document.getElementById('save-settings-btn').addEventListener('click', () => {
+            const provider = document.getElementById('provider-select').value;
+            const openAiKey = document.getElementById('openai-api-key').value;
+            const geminiKey = document.getElementById('gemini-api-key').value;
+            const format = document.getElementById('format-select').value;
+            const htmlRules = document.getElementById('html-rules-text').value;
+            const pugRules = document.getElementById('pug-rules-text').value;
+            const otherRules = document.getElementById('other-rules-text').value;
+            const sendPngData = document.getElementById('send-png-data').checked;
+
+            parent.postMessage({
+                pluginMessage: {
+                    type: 'save-settings',
+                    provider,
+                    openAiKey,
+                    geminiKey,
+                    format,
+                    htmlRules,
+                    pugRules,
+                    otherRules,
+                    sendPngData
+                }
+            }, '*');
+        });
+
+        // コード生成
+        document.getElementById('generate-btn').addEventListener('click', () => {
+            updateIncludePngDataFromSettings();
+            parent.postMessage({ pluginMessage: { type: 'extract-content' } }, '*');
+        });
+
+
+
+        // コピー
+        document.getElementById('copy-btn').addEventListener('click', function () {
+            const outputCode = document.getElementById('output-code');
+            outputCode.select();
+            document.execCommand('copy');
+            this.textContent = 'コピー済み';
+            setTimeout(() => this.textContent = 'コードをコピー', 2000);
+        });
+
+        // コード生成ロジック
+        async function generateCode(extractedData, extraRules = '', pngData = '', metadata = {}) {
+            if (!extractedData || Object.keys(extractedData).length === 0) {
+                alert('抽出されたデータがありません。');
                 return;
             }
-            // 抽出データと SVG データを保存
-            const { data: extractedData, svgData } = msg;
             window._lastExtractedData = extractedData;
-            window._lastExtractedSvg = svgData || '';
-            await generateCode(extractedData, '', svgData);
-        }
-    };
+            window._lastExtractedPng = pngData;
+            window._lastPngMetadata = metadata;
 
-    // 設定保存
-    document.getElementById('save-settings-btn').addEventListener('click', () => {
-        const provider = document.getElementById('provider-select').value;
-        const openAiKey = document.getElementById('openai-api-key').value;
-        const geminiKey = document.getElementById('gemini-api-key').value;
-        const format = document.getElementById('format-select').value;
-        const htmlRules = document.getElementById('html-rules-text').value;
-        const pugRules = document.getElementById('pug-rules-text').value;
-        const otherRules = document.getElementById('other-rules-text').value;
-        const sendSimplifiedSvg = document.getElementById('send-simplified-svg').checked;
+            const baseCode = document.getElementById('base-code').value;
+            const defaultExtraRules = document.getElementById('extra-rules').value;
+            const provider = document.getElementById('provider-select').value;
+            const apiKey = provider === 'openai'
+                ? document.getElementById('openai-api-key').value
+                : document.getElementById('gemini-api-key').value;
 
-        parent.postMessage({
-            pluginMessage: {
-                type: 'save-settings',
-                provider,
-                openAiKey,
-                geminiKey,
-                format,
-                htmlRules,
-                pugRules,
-                otherRules,
-                sendSimplifiedSvg
+            if (!apiKey) {
+                alert('APIキーが設定されていません。設定タブで入力してください。');
+                return;
             }
-        }, '*');
-    });
+            if (!baseCode) {
+                alert('ベースコンポーネントコードを入力してください。');
+                return;
+            }
 
-    // コード生成
-    document.getElementById('generate-btn').addEventListener('click', () => {
-        updateIncludeSvgDataFromSettings();
-        parent.postMessage({ pluginMessage: { type: 'extract-content', includeSvg: includeSvgData } }, '*');
-    });
+            const format = document.getElementById('format-select').value;
+            const formatRules = document.getElementById(`${format}-rules-text`).value;
+            const rules = extraRules || defaultExtraRules;
 
-    // コピー
-    document.getElementById('copy-btn').addEventListener('click', function () {
-        const outputCode = document.getElementById('output-code');
-        outputCode.select();
-        document.execCommand('copy');
-        this.textContent = 'コピー済み';
-        setTimeout(() => this.textContent = 'コードをコピー', 2000);
-    });
+            // システムプロンプトを組み立て
+            const systemPrompt = commonSystemPrompt
+                + (providerSpecificPrompts[provider] ? "\n" + providerSpecificPrompts[provider] : "");
 
-    // コード生成ロジック
-    async function generateCode(extractedData, extraRules = '', svgData = '') {
-        if (!extractedData || Object.keys(extractedData).length === 0) {
-            alert('抽出されたデータがありません。');
-            return;
-        }
-        window._lastExtractedData = extractedData;
-        window._lastExtractedSvg = svgData;
-
-        const baseCode = document.getElementById('base-code').value;
-        const defaultExtraRules = document.getElementById('extra-rules').value;
-        const provider = document.getElementById('provider-select').value;
-        const apiKey = provider === 'openai'
-            ? document.getElementById('openai-api-key').value
-            : document.getElementById('gemini-api-key').value;
-
-        if (!apiKey) {
-            alert('APIキーが設定されていません。設定タブで入力してください。');
-            return;
-        }
-        if (!baseCode) {
-            alert('ベースコンポーネントコードを入力してください。');
-            return;
-        }
-
-        const format = document.getElementById('format-select').value;
-        const formatRules = document.getElementById(`${format}-rules-text`).value;
-        const rules = extraRules || defaultExtraRules;
-
-        // システムプロンプトを組み立て
-        const systemPrompt = commonSystemPrompt
-            + (providerSpecificPrompts[provider] ? "\n" + providerSpecificPrompts[provider] : "");
-
-        // ユーザープロンプトを配列で構築
-        const promptLines = [
-            "以下の情報を元に、ベースとなるコンポーネントに適切な原稿を入力してください",
-            "## 情報",
-            "### ベースとなるコンポーネントコード",
-            baseCode,
-            "",
-            "### Figmaから抽出したJSON",
-            JSON.stringify(extractedData, null, 2).replace(/\\n/g, '<br>'),
-            ""
-        ];
-
-        if (svgData) {
-            // 1) 不要情報を削除
-            const cleaned = sanitizeSvg(svgData);
-            // 2) HTML エンティティをデコード
-            const decodedSvg = decodeHtmlEntities(cleaned);
-            promptLines.push(
-                "### フレームのSVGデータ",
-                decodedSvg,
+            // ユーザープロンプトを配列で構築
+            const promptLines = [
+                "以下の情報を元に、ベースとなるコンポーネントに適切な原稿を入力してください",
+                "## 情報",
+                "### ベースとなるコンポーネントコード",
+                baseCode,
+                "",
+                "### Figmaから抽出したJSON",
+                JSON.stringify(extractedData, null, 2).replace(/\\n/g, '<br>'),
                 ""
-            );
-        }
+            ];
 
-        promptLines.push(
-            "### 出力フォーマット",
-            format,
-            "",
-            "### フォーマット固有のルール",
-            formatRules,
-            "",
-            "### 追加ルール・指示",
-            rules,
-            "",
-            "### 重要",
-            "- 原稿はFigmaから抽出したJSONのtextフィールドから抽出しなさい",
-            "- textフィールドの内容が不完全に見えても、必ずtextフィールドのテキストを使用しなさい",
-            "- SVGの提供があるとき、順序判定時にSVGデータの見た目の位置を優先しなさい",
-            "- ベースとなるコンポーネントコードの原稿以外の箇所はそのまま維持しなさい",
-            "",
-            "## 手順",
-            "1. textフィールドの原稿を抽出する",
-            "2. SVGの提供があるとき、SVGデータの座標情報を元に、原稿の配置順序を判定する",
-            "3. ベースコンポーネントのどこに配置するか判断する",
-            "4. ベースコンポーネントのどの部分を複製すべきか判断する",
-            "5. 適切にテキストを配置したコードを生成する",
-            "6. コードのみを返してください（説明文なし）",
-        );
-
-        const userPrompt = promptLines.join("\n");
-
-        document.getElementById('prompt-log').value = userPrompt;
-
-        setOutputCode('生成中...');
-
-        try {
-            let response, data;
-
-            if (provider === 'openai') {
-                response = await fetch('https://api.openai.com/v1/chat/completions', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${apiKey}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        model: 'o4-mini',
-                        messages: [
-                            { role: 'system', content: systemPrompt },
-                            { role: 'user', content: userPrompt }
-                        ]
-                    })
-                });
-                data = await response.json();
-                if (data.error) throw new Error(data.error.message);
-                setOutputCode(data.choices[0].message.content);
-
-            } else {
-                // プロバイダー値に基づいてGeminiモデル名を決定
-                const geminiModel = provider === 'gemini-pro' ? 'gemini-2.5-pro' : 'gemini-2.5-flash';
-                
-                response = await fetch(
-                    `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${apiKey}`,
-                    {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            contents: [
-                                {
-                                    role: 'user',
-                                    parts: [
-                                        { text: systemPrompt + "\n\n" + userPrompt }
-                                    ]
-                                }
-                            ],
-                            generationConfig: {
-                                temperature: 0.3,
-                                maxOutputTokens: 2048
-                            }
-                        })
-                    }
+            // PNGデータが利用可能で、設定で送信が有効な場合に含める
+            if (pngData && includePngData) {
+                promptLines.push(
+                    "### フレームのPNGデータ（Base64エンコード済み）",
+                    `data:image/png;base64,${pngData}`,
+                    ""
                 );
-                data = await response.json();
-                if (data.error) throw new Error(data.error.message || 'Gemini API request failed');
-                console.log(data);
-                const candidate = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                setOutputCode(candidate || 'テキストが生成されませんでした。');
-            }
-        } catch (error) {
-            setOutputCode(`エラーが発生しました: ${error.message}`);
-        }
-    }
 
-    // プロバイダー切り替え
-    document.getElementById('provider-select').addEventListener('change', function () {
-        const provider = this.value;
-        document.querySelectorAll('.api-key-group').forEach(g => g.style.display = 'none');
-        
-        // geminiとgemini-proの両方でGemini APIキー欄を表示
-        if (provider === 'gemini' || provider === 'gemini-pro') {
-            document.getElementById('gemini-key-container').style.display = 'block';
-        } else {
-            document.getElementById(`${provider}-key-container`).style.display = 'block';
+                // メタデータがある場合は追加情報として含める
+                if (metadata && Object.keys(metadata).length > 0) {
+                    promptLines.push(
+                        "### PNGメタデータ",
+                        `- 元の要素数: ${metadata.originalNodeCount || 'N/A'}`,
+                        `- エクスポートスケール: ${metadata.exportScale || 'N/A'}`,
+                        `- ファイルサイズ: ${metadata.fileSize || 'N/A'} bytes`,
+                        `- 寸法: ${metadata.dimensions ? `${metadata.dimensions.width}x${metadata.dimensions.height}` : 'N/A'}`,
+                        ""
+                    );
+                }
+            }
+
+            promptLines.push(
+                "### 出力フォーマット",
+                format,
+                "",
+                "### フォーマット固有のルール",
+                formatRules,
+                "",
+                "### 追加ルール・指示",
+                rules,
+                "",
+                "### 重要",
+                "- 原稿はFigmaから抽出したJSONのtextフィールドから抽出",
+                "- textフィールドの内容が不完全に見えても、必ずtextフィールドのテキストを使用",
+                "- PNGデータが提供されている場合、視覚的なレイアウト情報を参考にして原稿の配置順序を判定",
+                "- ベースとなるコンポーネントコードの原稿以外の箇所は維持",
+                "",
+                "## 手順",
+                "1. textフィールドの原稿を抽出",
+                "2. PNGデータが提供されている場合、視覚的なレイアウト情報を元に、原稿の配置順序を判定",
+                "3. ベースコンポーネントのどこに配置するか判断",
+                "4. ベースコンポーネントのどの部分を複製すべきか判断",
+                "5. 適切にテキストを配置したコードを生成",
+                "6. コードのみを返してください",
+            );
+
+            const userPrompt = promptLines.join("\n");
+
+            document.getElementById('prompt-log').value = userPrompt;
+
+            setOutputCode('生成中...');
+
+            try {
+                let response, data;
+
+                if (provider === 'openai') {
+                    // OpenAI APIでPNGデータを含む場合は、vision modelを使用
+                    const messages = [
+                        { role: 'system', content: systemPrompt }
+                    ];
+
+                    if (pngData && includePngData) {
+                        // Vision APIを使用してPNGデータを含める
+                        messages.push({
+                            role: 'user',
+                            content: [
+                                { type: 'text', text: userPrompt },
+                                {
+                                    type: 'image_url',
+                                    image_url: {
+                                        url: `data:image/png;base64,${pngData}`
+                                    }
+                                }
+                            ]
+                        });
+                    } else {
+                        // テキストのみの場合
+                        messages.push({ role: 'user', content: userPrompt });
+                    }
+
+                    response = await fetch('https://api.openai.com/v1/chat/completions', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${apiKey}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            model: pngData && includePngData ? 'gpt-4o-mini' : 'gpt-4o-mini',
+                            messages: messages
+                        })
+                    });
+                    data = await response.json();
+                    if (data.error) throw new Error(data.error.message);
+                    setOutputCode(data.choices[0].message.content);
+
+                } else {
+                    // プロバイダー値に基づいてGeminiモデル名を決定
+                    const geminiModel = provider === 'gemini-pro' ? 'gemini-2.5-pro' : 'gemini-2.5-flash';
+
+                    const parts = [{ text: systemPrompt + "\n\n" + userPrompt }];
+
+                    // GeminiでPNGデータを含める場合
+                    if (pngData && includePngData) {
+                        parts.push({
+                            inline_data: {
+                                mime_type: 'image/png',
+                                data: pngData
+                            }
+                        });
+                    }
+
+                    response = await fetch(
+                        `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${apiKey}`,
+                        {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                contents: [
+                                    {
+                                        role: 'user',
+                                        parts: parts
+                                    }
+                                ],
+                                generationConfig: {
+                                    temperature: 0.3,
+                                    maxOutputTokens: 2048
+                                }
+                            })
+                        }
+                    );
+                    data = await response.json();
+                    if (data.error) throw new Error(data.error.message || 'Gemini API request failed');
+                    const candidate = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                    setOutputCode(candidate || 'テキストが生成されませんでした。');
+                }
+            } catch (error) {
+                setOutputCode(`エラーが発生しました: ${error.message}`);
+            }
         }
-    });
-</script>
+
+        // プロバイダー切り替え
+        document.getElementById('provider-select').addEventListener('change', function () {
+            const provider = this.value;
+            document.querySelectorAll('.api-key-group').forEach(g => g.style.display = 'none');
+
+            // geminiとgemini-proの両方でGemini APIキー欄を表示
+            if (provider === 'gemini' || provider === 'gemini-pro') {
+                document.getElementById('gemini-key-container').style.display = 'block';
+            } else {
+                document.getElementById(`${provider}-key-container`).style.display = 'block';
+            }
+        });
+    </script>
 </body>
+
 </html>
