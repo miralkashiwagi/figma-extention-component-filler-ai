@@ -154,7 +154,8 @@
         <h3>API設定</h3>
         <select id="provider-select">
             <option value="openai">OpenAI (GPT-4o-mini)</option>
-            <option value="gemini">Gemini 2.0 Flash</option>
+            <option value="gemini">Gemini 2.5 Flash</option>
+            <!--<option value="gemini-pro">Gemini 2.5 Pro (Beta)</option>-->
         </select>
 
         <div id="api-keys-container">
@@ -316,7 +317,13 @@
         // API キー欄も初期表示に合わせる
         const provider = document.getElementById('provider-select').value;
         document.querySelectorAll('.api-key-group').forEach(g => g.style.display = 'none');
-        document.getElementById(`${provider}-key-container`).style.display = 'block';
+        
+        // geminiとgemini-proの両方でGemini APIキー欄を表示
+        if (provider === 'gemini' || provider === 'gemini-pro') {
+            document.getElementById('gemini-key-container').style.display = 'block';
+        } else {
+            document.getElementById(`${provider}-key-container`).style.display = 'block';
+        }
     };
 
     // Figma からのメッセージ受信
@@ -345,7 +352,13 @@
             document.querySelectorAll('.rules-group').forEach(g => g.style.display = 'none');
             document.getElementById(`${format}-rules`).style.display = 'block';
             document.querySelectorAll('.api-key-group').forEach(g => g.style.display = 'none');
-            document.getElementById(`${provider}-key-container`).style.display = 'block';
+            
+            // geminiとgemini-proの両方でGemini APIキー欄を表示
+            if (provider === 'gemini' || provider === 'gemini-pro') {
+                document.getElementById('gemini-key-container').style.display = 'block';
+            } else {
+                document.getElementById(`${provider}-key-container`).style.display = 'block';
+            }
         }
         else if (msg.type === 'saved') {
             alert('設定を保存しました');
@@ -515,15 +528,18 @@
                 setOutputCode(data.choices[0].message.content);
 
             } else {
+                // プロバイダー値に基づいてGeminiモデル名を決定
+                const geminiModel = provider === 'gemini-pro' ? 'gemini-2.5-pro' : 'gemini-2.5-flash';
+                
                 response = await fetch(
-                    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+                    `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${apiKey}`,
                     {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             contents: [
                                 {
-                                    role: 'assistant',
+                                    role: 'user',
                                     parts: [
                                         { text: systemPrompt + "\n\n" + userPrompt }
                                     ]
@@ -538,6 +554,7 @@
                 );
                 data = await response.json();
                 if (data.error) throw new Error(data.error.message || 'Gemini API request failed');
+                console.log(data);
                 const candidate = data.candidates?.[0]?.content?.parts?.[0]?.text;
                 setOutputCode(candidate || 'テキストが生成されませんでした。');
             }
@@ -550,7 +567,13 @@
     document.getElementById('provider-select').addEventListener('change', function () {
         const provider = this.value;
         document.querySelectorAll('.api-key-group').forEach(g => g.style.display = 'none');
-        document.getElementById(`${provider}-key-container`).style.display = 'block';
+        
+        // geminiとgemini-proの両方でGemini APIキー欄を表示
+        if (provider === 'gemini' || provider === 'gemini-pro') {
+            document.getElementById('gemini-key-container').style.display = 'block';
+        } else {
+            document.getElementById(`${provider}-key-container`).style.display = 'block';
+        }
     });
 </script>
 </body>

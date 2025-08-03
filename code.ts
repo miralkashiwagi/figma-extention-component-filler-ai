@@ -13,7 +13,7 @@ interface SelectionData {
 }
 
 interface SettingsData {
-  provider: string;
+  provider: 'openai' | 'gemini' | 'gemini-pro';
   openAiKey: string;
   geminiKey: string;
   format: string;
