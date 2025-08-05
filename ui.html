@@ -451,14 +451,14 @@
 
                 // メタデータがある場合は追加情報として含める
                 if (metadata && Object.keys(metadata).length > 0) {
-                    promptLines.push(
+                    console.log(
                         "### PNGメタデータ",
                         `- 元の要素数: ${metadata.originalNodeCount || 'N/A'}`,
                         `- エクスポートスケール: ${metadata.exportScale || 'N/A'}`,
                         `- ファイルサイズ: ${metadata.fileSize || 'N/A'} bytes`,
                         `- 寸法: ${metadata.dimensions ? `${metadata.dimensions.width}x${metadata.dimensions.height}` : 'N/A'}`,
                         ""
-                    );
+                    )
                 }
             }
 
@@ -565,13 +565,14 @@
                                     }
                                 ],
                                 generationConfig: {
-                                    temperature: 0.3,
-                                    maxOutputTokens: 2048
+                                    temperature: 0.1,
+                                    maxOutputTokens: 8192
                                 }
                             })
                         }
                     );
                     data = await response.json();
+                    console.log(data);
                     if (data.error) throw new Error(data.error.message || 'Gemini API request failed');
                     const candidate = data.candidates?.[0]?.content?.parts?.[0]?.text;
                     setOutputCode(candidate || 'テキストが生成されませんでした。');

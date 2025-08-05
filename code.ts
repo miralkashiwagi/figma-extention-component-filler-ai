@@ -107,21 +107,6 @@ async function extractTextContent(nodeId: string): Promise<TextContent[]> {
 
     if (node.type === "TEXT") {
       const textNode = node as TextNode;
-      // テキスト全体の範囲で使われている全フォントを取得してロード
-      // const length = textNode.characters.length;
-      // const fonts = new Set<string>();
-      // for (let i = 0; i < length; i++) {
-      //   const font = textNode.getRangeFontName(i, i + 1) as FontName;
-      //   fonts.add(JSON.stringify(font));
-      // }
-      // // フォントを一括ロード
-      // await Promise.all(Array.from(fonts).map(async (f) => {
-      //   try {
-      //     await figma.loadFontAsync(JSON.parse(f));
-      //   } catch (error) {
-      //     console.warn("Failed to load font:", JSON.parse(f), error);
-      //   }
-      // }));
 
       texts.push({
         id: textNode.id,
@@ -130,11 +115,6 @@ async function extractTextContent(nodeId: string): Promise<TextContent[]> {
           .replace(/\\n/g, '\n')           // バックスラッシュn → 改行
           .replace(/\r\n/g, '\n')          // CRLF → LF
           .replace(/\r/g, '\n')            // CR → LF
-        // style: {
-        //   fontSize: textNode.fontSize,
-        //   fontWeight: textNode.fontWeight,
-        //   textCase: textNode.textCase
-        // }
       });
     } else if ("children" in node) {
       for (const child of node.children) {
@@ -468,11 +448,11 @@ async function optimizeFileSize(node: GroupNode | FrameNode, maxSizeKB: number =
 
   let scaleSteps: number[];
   if (nodeArea < 10000) { // 小さな要素（100x100未満）
-    scaleSteps = [0.5, 0.75, 1.0, 0.4, 0.3]; // 高解像度を優先
+    scaleSteps = [1, 0.75, 0.5, 0.4]; // 高解像度を優先
   } else if (nodeArea < 50000) { // 中程度の要素
-    scaleSteps = [0.5, 0.4, 0.75, 0.3, 0.25]; // バランス重視
+    scaleSteps = [0.75, 0.5, 0.4, 0.3]; // バランス重視
   } else { // 大きな要素
-    scaleSteps = [0.5, 0.4, 0.3, 0.25, 0.2]; // 低解像度を優先
+    scaleSteps = [0.5, 0.4, 0.3]; // 低解像度を優先
   }
 
   for (const currentScale of scaleSteps) {
@@ -517,7 +497,7 @@ async function optimizeFileSize(node: GroupNode | FrameNode, maxSizeKB: number =
     console.warn('PNG export with width constraint failed:', error);
   }
 
-  // すべて失敗した場合は最小スケールのデータを返す
+  // すべて失敗した場合は0.5で返す
   const fallbackOptions: ExportSettings = {
     format: 'PNG',
     constraint: { type: 'SCALE', value: 0.5 }
