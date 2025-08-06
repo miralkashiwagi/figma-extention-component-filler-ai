@@ -112,10 +112,8 @@ function calculateBoundingBox(nodes) {
         height: maxY - minY
     };
 }
-// コンテナタイプ（グループまたはフレーム）を決定
-function determineContainerType(_nodes) {
-    // 安全性を優先してフレームを使用
-    // グループ化でのエラーを避けるため、常にフレームを使用
+// 常にフレームを使用（安全性を優先）
+function determineContainerType() {
     return 'frame';
 }
 // 選択された要素を単一のグループまたはフレームにまとめる
@@ -185,8 +183,8 @@ function createGroupFromSelection(selection) {
                     error: "選択された要素の境界ボックスが無効です（幅または高さが0以下）"
                 };
             }
-            // コンテナタイプを決定
-            const containerType = determineContainerType(validNodes);
+            // コンテナタイプを決定（常にフレーム）
+            determineContainerType();
             // 親ノードを取得し、すべての選択要素が同じ親を持つことを確認
             const firstParent = validNodes[0].parent;
             if (!firstParent) {
@@ -215,32 +213,14 @@ function createGroupFromSelection(selection) {
             });
             let containerNode;
             try {
-                if (containerType === 'frame') {
-                    // フレームを作成
-                    containerNode = figma.createFrame();
-                    containerNode.name = "Temporary Export Frame";
-                    containerNode.x = boundingBox.x;
-                    containerNode.y = boundingBox.y;
-                    containerNode.resize(boundingBox.width, boundingBox.height);
-                    // 背景を透明に設定
-                    containerNode.fills = [];
-                }
-                else {
-                    // グループを作成（まず仮のフレームを作成してからグループ化）
-                    const tempFrame = figma.createFrame();
-                    tempFrame.x = boundingBox.x;
-                    tempFrame.y = boundingBox.y;
-                    tempFrame.resize(boundingBox.width, boundingBox.height);
-                    tempFrame.fills = [];
-                    // 親ノードに追加
-                    if ('appendChild' in parentNode) {
-                        parentNode.appendChild(tempFrame);
-                    }
-                    else {
-                        throw new Error("親ノードが子要素を追加できません");
-                    }
-                    containerNode = tempFrame;
-                }
+                // フレームを作成
+                containerNode = figma.createFrame();
+                containerNode.name = "Temporary Export Frame";
+                containerNode.x = boundingBox.x;
+                containerNode.y = boundingBox.y;
+                containerNode.resize(boundingBox.width, boundingBox.height);
+                // 背景を透明に設定
+                containerNode.fills = [];
                 // 親ノードに追加
                 if ('appendChild' in parentNode) {
                     parentNode.appendChild(containerNode);
@@ -298,49 +278,7 @@ function createGroupFromSelection(selection) {
                     error: `要素の移動中にエラーが発生しました: ${errorMessage}`
                 };
             }
-            // グループタイプの場合、実際のグループに変換
-            if (containerType === 'group' && 'children' in parentNode) {
-                try {
-                    // 一時フレーム内の要素を取得
-                    const childrenToGroup = [...containerNode.children];
-                    if (childrenToGroup.length === 0) {
-                        throw new Error("グループ化する子要素がありません");
-                    }
-                    // 一時フレームの位置を保存
-                    const frameX = containerNode.x;
-                    const frameY = containerNode.y;
-                    // 子要素を親ノードに移動（グループ化の準備）
-                    for (const child of childrenToGroup) {
-                        if ('x' in child && 'y' in child) {
-                            // 絶対位置を計算
-                            const absoluteX = frameX + child.x;
-                            const absoluteY = frameY + child.y;
-                            // 親ノードに移動
-                            parentNode.appendChild(child);
-                            // 絶対位置を設定
-                            child.x = absoluteX;
-                            child.y = absoluteY;
-                        }
-                        else {
-                            parentNode.appendChild(child);
-                        }
-                    }
-                    // 一時フレームを削除
-                    containerNode.remove();
-                    // 要素をグループ化
-                    const groupNode = figma.group(childrenToGroup, parentNode);
-                    groupNode.name = "Temporary Export Group";
-                    containerNode = groupNode;
-                }
-                catch (groupError) {
-                    const errorMessage = groupError instanceof Error ? groupError.message : String(groupError);
-                    return {
-                        success: false,
-                        originalNodes: selection,
-                        error: `グループ化の最終段階でエラーが発生しました: ${errorMessage}`
-                    };
-                }
-            }
+            // フレームのみを使用するため、グループ変換処理は不要
             return {
                 success: true,
                 groupedNode: containerNode,
@@ -442,7 +380,7 @@ function optimizeFileSize(node_1) {
     });
 }
 // メインのPNGエクスポート関数
-function exportToPng(node, options) {
+function exportToPng(node, _options) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             if (!node) {
@@ -457,13 +395,7 @@ function exportToPng(node, options) {
                     }
                 };
             }
-            // デフォルトオプションを設定（将来の拡張用）
-            const defaultOptions = {
-                scale: 0.5,
-                format: 'PNG'
-            };
-            // オプションをマージ（現在は使用していないが、将来の拡張用）
-            const _exportOptions = Object.assign(Object.assign({}, defaultOptions), options);
+            // _optionsパラメータは将来の拡張用として保持
             // ノードの寸法を取得
             const nodeWidth = 'width' in node ? node.width : 0;
             const nodeHeight = 'height' in node ? node.height : 0;
@@ -614,35 +546,6 @@ function cleanupTemporaryNode(node, parentNode) {
         }
     });
 }
-// 元の選択状態を復元
-function _restoreOriginalSelection(originalNodes) {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            // 削除されていないノードのみをフィルタリング
-            const validNodes = originalNodes.filter(node => !node.removed);
-            if (validNodes.length > 0) {
-                figma.currentPage.selection = validNodes;
-                // console.log(`${validNodes.length}個のノードの選択状態を復元しました`);
-            }
-            else {
-                // すべてのノードが削除されている場合は選択をクリア
-                figma.currentPage.selection = [];
-                // console.log("すべての元ノードが削除されているため、選択をクリアしました");
-            }
-        }
-        catch (error) {
-            const _errorMessage = error instanceof Error ? error.message : String(error);
-            // console.error(`選択状態の復元中にエラーが発生しました: ${_errorMessage}`);
-            // エラーが発生した場合は選択をクリア
-            try {
-                figma.currentPage.selection = [];
-            }
-            catch (clearError) {
-                // console.error("選択のクリアにも失敗しました:", clearError);
-            }
-        }
-    });
-}
 // クリーンアップエラーのハンドリング
 function handleCleanupError(_error) {
     // console.error("クリーンアップ処理でエラーが発生しました:", _error.message);
@@ -653,7 +556,6 @@ function handleCleanupError(_error) {
 function groupAndExportToPng(selection) {
     return __awaiter(this, void 0, void 0, function* () {
         let temporaryNode;
-        const _originalNodes = selection;
         let parentNode;
         try {
             // 選択要素の事前チェック（要件1.4対応）
@@ -697,7 +599,6 @@ function groupAndExportToPng(selection) {
                 };
             }
             temporaryNode = groupingResult.groupedNode;
-            // originalNodes = groupingResult.originalNodes;
             // PNGエクスポートを実行（要件2.4対応）
             const exportResult = yield exportToPng(temporaryNode);
             if (!exportResult.success) {
