@@ -381,6 +381,7 @@
         // コード生成
         document.getElementById('generate-btn').addEventListener('click', () => {
             updateIncludePngDataFromSettings();
+            // console.log('Requesting content extraction...');
             parent.postMessage({ pluginMessage: { type: 'extract-content' } }, '*');
         });
 

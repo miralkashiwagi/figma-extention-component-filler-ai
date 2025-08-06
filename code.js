@@ -47,36 +47,44 @@ figma.on("selectionchange", () => {
     }));
     figma.ui.postMessage({ type: "selection", data });
 });
+// 再帰的にテキストを抽出
+function extractTextsFromNode(node) {
+    return __awaiter(this, void 0, void 0, function* () {
+        let texts = [];
+        if (node.type === "TEXT") {
+            const textNode = node;
+            texts.push({
+                id: textNode.id,
+                text: textNode.characters
+                    .replace(/\u2028/g, '\n') // Unicode改行
+                    .replace(/\\n/g, '\n') // バックスラッシュn → 改行
+                    .replace(/\r\n/g, '\n') // CRLF → LF
+                    .replace(/\r/g, '\n') // CR → LF
+            });
+        }
+        else if ("children" in node) {
+            for (const child of node.children) {
+                texts = texts.concat(yield extractTextsFromNode(child));
+            }
+        }
+        return texts;
+    });
+}
 // テキストコンテンツの抽出
 function extractTextContent(nodeId) {
     return __awaiter(this, void 0, void 0, function* () {
-        const node = yield figma.getNodeByIdAsync(nodeId);
-        if (!node)
-            return [];
-        // 再帰的にテキストを抽出
-        function extractTextsFromNode(node) {
-            return __awaiter(this, void 0, void 0, function* () {
-                let texts = [];
-                if (node.type === "TEXT") {
-                    const textNode = node;
-                    texts.push({
-                        id: textNode.id,
-                        text: textNode.characters
-                            .replace(/\u2028/g, '\n') // Unicode改行
-                            .replace(/\\n/g, '\n') // バックスラッシュn → 改行
-                            .replace(/\r\n/g, '\n') // CRLF → LF
-                            .replace(/\r/g, '\n') // CR → LF
-                    });
-                }
-                else if ("children" in node) {
-                    for (const child of node.children) {
-                        texts = texts.concat(yield extractTextsFromNode(child));
-                    }
-                }
-                return texts;
-            });
+        try {
+            const node = yield figma.getNodeByIdAsync(nodeId);
+            if (!node) {
+                console.warn(`Node with ID ${nodeId} not found`);
+                return [];
+            }
+            return extractTextsFromNode(node);
         }
-        return extractTextsFromNode(node);
+        catch (error) {
+            console.error(`Error accessing node ${nodeId}:`, error);
+            return [];
+        }
     });
 }
 // グループ化機能の実装
@@ -105,15 +113,10 @@ function calculateBoundingBox(nodes) {
     };
 }
 // コンテナタイプ（グループまたはフレーム）を決定
-function determineContainerType(nodes) {
-    // フレームが含まれている場合、またはテキストノードが複数ある場合はフレームを使用
-    const hasFrame = nodes.some(node => node.type === 'FRAME');
-    const textNodeCount = nodes.filter(node => node.type === 'TEXT').length;
-    if (hasFrame || textNodeCount > 1) {
-        return 'frame';
-    }
-    // その他の場合はグループを使用
-    return 'group';
+function determineContainerType(_nodes) {
+    // 安全性を優先してフレームを使用
+    // グループ化でのエラーを避けるため、常にフレームを使用
+    return 'frame';
 }
 // 選択された要素を単一のグループまたはフレームにまとめる
 function createGroupFromSelection(selection) {
@@ -274,8 +277,8 @@ function createGroupFromSelection(selection) {
                         }
                     }
                     catch (nodeError) {
-                        const nodeErrorMessage = nodeError instanceof Error ? nodeError.message : String(nodeError);
-                        // console.warn(`ノード ${node.id} の移動中にエラーが発生しました: ${nodeErrorMessage}`);
+                        const _nodeErrorMessage = nodeError instanceof Error ? nodeError.message : String(nodeError);
+                        // console.warn(`ノード ${node.id} の移動中にエラーが発生しました: ${_nodeErrorMessage}`);
                         // 個別のノードエラーは警告として扱い、処理を継続
                     }
                 }
@@ -299,13 +302,32 @@ function createGroupFromSelection(selection) {
             if (containerType === 'group' && 'children' in parentNode) {
                 try {
                     // 一時フレーム内の要素を取得
-                    const childrenToGroup = containerNode.children.slice();
+                    const childrenToGroup = [...containerNode.children];
                     if (childrenToGroup.length === 0) {
                         throw new Error("グループ化する子要素がありません");
                     }
+                    // 一時フレームの位置を保存
+                    const frameX = containerNode.x;
+                    const frameY = containerNode.y;
+                    // 子要素を親ノードに移動（グループ化の準備）
+                    for (const child of childrenToGroup) {
+                        if ('x' in child && 'y' in child) {
+                            // 絶対位置を計算
+                            const absoluteX = frameX + child.x;
+                            const absoluteY = frameY + child.y;
+                            // 親ノードに移動
+                            parentNode.appendChild(child);
+                            // 絶対位置を設定
+                            child.x = absoluteX;
+                            child.y = absoluteY;
+                        }
+                        else {
+                            parentNode.appendChild(child);
+                        }
+                    }
                     // 一時フレームを削除
                     containerNode.remove();
-                    // 要素を直接グループ化
+                    // 要素をグループ化
                     const groupNode = figma.group(childrenToGroup, parentNode);
                     groupNode.name = "Temporary Export Group";
                     containerNode = groupNode;
@@ -357,7 +379,6 @@ function encodeToBase64(pngData) {
 function optimizeFileSize(node_1) {
     return __awaiter(this, arguments, void 0, function* (node, maxSizeKB = 512) {
         const maxSizeBytes = maxSizeKB * 512;
-        let scale = 0.5; // 初期スケール（デフォルトを0.5に変更）
         let pngData;
         // まず0.5を試し、必要に応じてスケールを調整
         // 小さな要素の場合は高解像度、大きな要素の場合は低解像度を使用
@@ -586,15 +607,15 @@ function cleanupTemporaryNode(node, parentNode) {
             return childrenToRestore;
         }
         catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            // console.error(`一時ノードのクリーンアップ中にエラーが発生しました: ${errorMessage}`);
+            const _errorMessage = error instanceof Error ? error.message : String(error);
+            // console.error(`一時ノードのクリーンアップ中にエラーが発生しました: ${_errorMessage}`);
             // エラーが発生してもメインフローは継続
             return [];
         }
     });
 }
 // 元の選択状態を復元
-function restoreOriginalSelection(originalNodes) {
+function _restoreOriginalSelection(originalNodes) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             // 削除されていないノードのみをフィルタリング
@@ -610,8 +631,8 @@ function restoreOriginalSelection(originalNodes) {
             }
         }
         catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            // console.error(`選択状態の復元中にエラーが発生しました: ${errorMessage}`);
+            const _errorMessage = error instanceof Error ? error.message : String(error);
+            // console.error(`選択状態の復元中にエラーが発生しました: ${_errorMessage}`);
             // エラーが発生した場合は選択をクリア
             try {
                 figma.currentPage.selection = [];
@@ -623,8 +644,8 @@ function restoreOriginalSelection(originalNodes) {
     });
 }
 // クリーンアップエラーのハンドリング
-function handleCleanupError(error) {
-    // console.error("クリーンアップ処理でエラーが発生しました:", error.message);
+function handleCleanupError(_error) {
+    // console.error("クリーンアップ処理でエラーが発生しました:", _error.message);
     // エラーをログに記録するが、メインワークフローは中断しない
     // 必要に応じて、ここでエラー報告やユーザー通知を行う
 }
@@ -632,7 +653,7 @@ function handleCleanupError(error) {
 function groupAndExportToPng(selection) {
     return __awaiter(this, void 0, void 0, function* () {
         let temporaryNode;
-        let originalNodes = selection;
+        const _originalNodes = selection;
         let parentNode;
         try {
             // 選択要素の事前チェック（要件1.4対応）
@@ -676,7 +697,7 @@ function groupAndExportToPng(selection) {
                 };
             }
             temporaryNode = groupingResult.groupedNode;
-            originalNodes = groupingResult.originalNodes;
+            // originalNodes = groupingResult.originalNodes;
             // PNGエクスポートを実行（要件2.4対応）
             const exportResult = yield exportToPng(temporaryNode);
             if (!exportResult.success) {
@@ -868,19 +889,47 @@ figma.ui.onmessage = (msg) => __awaiter(void 0, void 0, void 0, function* () {
             return;
         }
         try {
+            // 選択されたノードの有効性を事前チェック
+            const validNodes = selection.filter(node => {
+                try {
+                    // ノードが削除されていないかチェック
+                    if (node.removed) {
+                        console.warn(`Node ${node.id} has been removed`);
+                        return false;
+                    }
+                    // ノード名にアクセスして有効性を確認
+                    const _ = node.name;
+                    return true;
+                }
+                catch (error) {
+                    console.warn(`Node ${node.id} is invalid:`, error);
+                    return false;
+                }
+            });
+            if (validNodes.length === 0) {
+                const feedback = createErrorFeedback('selection', new Error('All selected nodes are invalid or have been removed'));
+                figma.ui.postMessage({
+                    type: "extraction-result",
+                    data: null,
+                    error: feedback.message,
+                    errorDetails: feedback.details,
+                    pngData: null
+                });
+                return;
+            }
             // テキスト抽出（エラーハンドリング強化）
             let flattened = [];
             try {
-                const contentPromises = selection.map(node => extractTextContent(node.id));
+                const contentPromises = validNodes.map(node => extractTextContent(node.id));
                 const contents = yield Promise.all(contentPromises);
                 flattened = contents.flat().filter(Boolean);
             }
             catch (textError) {
-                // console.warn('テキスト抽出中にエラーが発生しましたが、処理を続行します:', textError);
+                console.warn('テキスト抽出中にエラーが発生しましたが、処理を続行します:', textError);
                 // テキスト抽出エラーは警告として扱い、処理を継続
             }
             // PNG エクスポート（要件2.4: エクスポート失敗時のエラーハンドリング）
-            const pngResult = yield groupAndExportToPng(selection);
+            const pngResult = yield groupAndExportToPng(validNodes);
             if (!pngResult.success) {
                 let feedback;
                 // エラーの種類に応じて適切なフィードバックを生成
