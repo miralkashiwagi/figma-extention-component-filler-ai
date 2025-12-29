@@ -158,7 +158,7 @@
             <h3>API設定</h3>
             <select id="provider-select">
                 <option value="openai">OpenAI (GPT-4o-mini)</option>
-                <option value="gemini">Gemini 2.5 Flash</option>
+                <option value="gemini">Gemini 3 Flash</option>
                 <!--<option value="gemini-pro">Gemini 2.5 Pro (Beta)</option>-->
             </select>
 
@@ -539,7 +539,7 @@
 
                 } else {
                     // プロバイダー値に基づいてGeminiモデル名を決定
-                    const geminiModel = provider === 'gemini-pro' ? 'gemini-2.5-pro' : 'gemini-2.5-flash';
+                    const geminiModel = provider === 'gemini-pro' ? 'gemini-2.5-pro' : 'gemini-3-flash-preview';
 
                     const parts = [{ text: systemPrompt + "\n\n" + userPrompt }];
 
